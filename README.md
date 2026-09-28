@@ -20,17 +20,17 @@
 - Windows 11 與已安裝的 Codex 桌面版。
 - Node.js **22.15 或更新版本**，`node.exe` 可從 PATH 執行。
 - Windows PowerShell 5.1，能執行下載後的本機腳本。
-- Codex 已啟用本機 CDP：`127.0.0.1:3134`。
+- Codex 已啟用本機 CDP，連接埠可以變動；助手會從目前的 Codex 主程序自動尋找。
 
 實際驗證的 Codex 版本是 **26.924.2738.0**，主程序名稱為 `ChatGPT.exe`，Microsoft Store 套件為 `OpenAI.Codex`。其他版本、安裝方式和作業系統尚未驗證。
 
 ## 啟動
 
 1. 下載並解壓縮套件，或 clone 這個 repo。
-2. 確認 Codex 已開啟 CDP。可在 PowerShell 檢查：
+2. 確認 Codex 已開啟 CDP。可在 PowerShell 檢查目前的連接埠：
 
    ```powershell
-   Invoke-RestMethod http://127.0.0.1:3134/json/version
+   powershell -NoProfile -File .\find-codex-cdp.ps1
    ```
 
    若尚未開啟，先完成並關閉正在執行的 Codex 工作，再完全退出 Codex。Microsoft Store 安裝版可以這樣啟動：
@@ -47,7 +47,11 @@
 3. 雙擊 **`Start-Theme-Switcher.cmd`**。
 4. 點選 Codex 右上角 **「◈ 佈景」**，選擇佈景、配色或圖片，再調整共用不透明度。
 
-不需要 `npm install`。背景助手會在頁面重新載入或 CDP 重新連線後補上切換器。未設定 Windows 開機自動啟動；同一台電腦請只執行一份助手。
+不需要 `npm install`。背景助手會在頁面重新載入或 Codex 重開、CDP 連接埠改變後重新連線，補上切換器。未設定 Windows 開機自動啟動；同一台電腦請只執行一份助手。若新的 Codex 工作階段沒有啟用 CDP，請依上面的步驟開啟後，再點桌面啟動檔。
+
+## 建立桌面執行檔
+
+在套件資料夾執行 `powershell -NoProfile -File .\Build-Desktop-Launcher.ps1`，會在桌面建立 **`Codex Glass Themes.exe`**。之後雙擊它即可啟動或接回切換器。執行檔會呼叫此套件資料夾內的 `Theme-Switcher.ps1`；若搬動套件，請重新執行建置命令。已執行中的助手會自行接回重開後的 Codex，通常無須再次點擊。
 
 ## 停止與還原
 
@@ -74,9 +78,11 @@
 | `blue-glass.css` | 第一版藍紫玻璃備份 |
 | `silver-glass.css` | 銀白亮面玻璃 |
 | `Theme-Switcher.ps1` | 隱藏背景啟動／停止助手 |
+| `find-codex-cdp.ps1` | 尋找目前 Codex 主視窗使用的本機 CDP 連接埠 |
+| `GlassLauncher.cs`、`Build-Desktop-Launcher.ps1` | 產生桌面單一啟動執行檔 |
 
 ## 驗證範圍
 
-已在上述單機版本實際確認：佈景切換、三色調色與還原、跨佈景共用透明度、自訂圖片顯示和 IndexedDB 儲存、助手停止後原生視窗樣式還原，以及重新啟動助手後偏好保留。封裝檢查使用 `npm run check` 及 PowerShell 語法解析。
+已在上述單機版本實際確認：佈景切換、三色調色與還原、跨佈景共用透明度、自訂圖片顯示和 IndexedDB 儲存、助手停止後原生視窗樣式還原、重新啟動助手後偏好保留，以及桌面執行檔接上新的 CDP 連接埠。封裝檢查使用 `npm run check` 及 PowerShell 語法解析。完整退出再重開 Codex 的流程未在同一段聊天中測試，以免中斷目前的工作。
 
 介面選擇器依賴 Codex 的 DOM 結構，更新後可能需要調整。多個 Codex 主視窗目前不支援精確配對；請以單一主視窗使用。
