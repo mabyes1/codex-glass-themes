@@ -1,0 +1,12 @@
+{
+  "name": "codex-glass-themes",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local glass themes, a color palette, image backgrounds and shared window opacity for Codex on Windows.",
+  "type": "module",
+  "engines": { "node": ">=22.15.0" },
+  "scripts": {
+    "start": "node theme-host.mjs",
+    "check": "node --check theme-host.mjs && node --check theme-panel.js"
+  }
+}

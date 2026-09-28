@@ -1,0 +1,40 @@
+:root {
+ --color-surface:rgba(13,23,40,.44)!important;
+ --color-surface-secondary:rgba(25,40,62,.42)!important;
+ --color-surface-tertiary:rgba(38,53,77,.55)!important;
+ --color-surface-elevated:rgba(29,43,66,.94)!important;
+ --color-surface-elevated-secondary:rgba(38,53,77,.78)!important;
+ --color-surface-card:rgba(34,48,73,.5)!important;
+ --app-color-background-surface:rgba(13,23,40,.44)!important;
+ --app-color-background-surface-under:transparent!important;
+ --color-token-main-surface-primary:transparent!important;
+ --color-token-side-bar-background:transparent!important;
+ --chat-background-color:transparent!important;
+ --color-border:rgba(186,215,255,.16)!important;
+ --color-border-default:rgba(186,215,255,.16)!important;
+ --color-token-border-default:rgba(186,215,255,.16)!important;
+ --app-color-border:rgba(186,215,255,.16)!important;
+ --user-message-background-color:rgba(147,184,244,.12)!important;
+}
+html { background:#0c1426!important; }
+body { background:radial-gradient(ellipse at 0% 10%,rgba(59,145,179,.38),transparent 52%),radial-gradient(ellipse at 95% 90%,rgba(126,85,167,.34),transparent 54%),linear-gradient(135deg,#111d30,#101626 60%,#1d203a)!important; }
+main[class*='_MainContentSurface_'] {background:rgba(15,24,41,.38)!important;backdrop-filter:blur(24px) saturate(125%);box-shadow:inset 1px 1px 0 rgba(212,231,255,.12)!important;}
+aside.app-shell-left-panel {background:linear-gradient(145deg,rgba(170,213,242,.09),rgba(27,37,61,.32))!important;backdrop-filter:blur(28px) saturate(135%);border-right:1px solid rgba(195,221,255,.13)!important;}
+[role='dialog'],[role='menu'] {backdrop-filter:blur(28px);box-shadow:0 16px 56px #0005,inset 0 1px 0 #ffffff20!important;}
+/* Composer and message surfaces use their own backgrounds. */
+[data-composer-surface-variant] {
+ background:linear-gradient(125deg,rgba(140,192,232,.18),rgba(137,119,193,.16))!important;
+ backdrop-filter:blur(24px) saturate(135%);
+ box-shadow:inset 0 0 0 1px rgba(201,224,255,.19),inset 0 1px 0 rgba(234,244,255,.17),0 10px 32px rgba(3,9,24,.18)!important;
+}
+[data-composer-surface-variant]:focus-within {
+ box-shadow:inset 0 0 0 1px rgba(173,218,255,.32),inset 0 1px 0 rgba(234,244,255,.2),0 10px 32px rgba(3,9,24,.18)!important;
+}
+[data-user-message-bubble] {
+ background:linear-gradient(120deg,rgba(132,180,229,.16),rgba(152,132,201,.15))!important;
+ box-shadow:inset 0 0 0 1px rgba(196,218,255,.13)!important;
+}
+/* Remove the old opaque-theme footer fade, whose bounds show on glass. */
+.thread-scroll-container .bg-gradient-to-t.from-surface.via-surface {
+ background:none!important;
+}
