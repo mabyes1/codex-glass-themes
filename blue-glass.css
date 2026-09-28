@@ -30,6 +30,19 @@ aside.app-shell-left-panel {background:linear-gradient(145deg,rgba(170,213,242,.
 [data-composer-surface-variant]:focus-within {
  box-shadow:inset 0 0 0 1px rgba(173,218,255,.32),inset 0 1px 0 rgba(234,244,255,.2),0 10px 32px rgba(3,9,24,.18)!important;
 }
+/* The new-chat composer paints its gray fill on the inner body. */
+[data-composer-placement="home"] [data-composer-surface-variant] {
+ background:transparent!important;
+ box-shadow:none!important;
+ backdrop-filter:none!important;
+}
+[data-composer-placement="home"] [data-composer-body] {
+ background:linear-gradient(125deg,rgba(140,192,232,.18),rgba(137,119,193,.16))!important;
+ backdrop-filter:blur(24px) saturate(135%);
+ border:1px solid rgba(201,224,255,.19)!important;
+ border-radius:22px!important;
+ box-shadow:inset 0 1px 0 rgba(234,244,255,.17),0 10px 32px rgba(3,9,24,.18)!important;
+}
 [data-user-message-bubble] {
  background:linear-gradient(120deg,rgba(132,180,229,.16),rgba(152,132,201,.15))!important;
  box-shadow:inset 0 0 0 1px rgba(196,218,255,.13)!important;
