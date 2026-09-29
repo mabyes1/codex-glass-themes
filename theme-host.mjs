@@ -9,7 +9,7 @@ const stopFile=join(runtime,'stop'),pidFile=join(runtime,'host.pid');
 await unlink(stopFile).catch(()=>{});await writeFile(pidFile,String(process.pid));
 const themes={color:await readFile(join(dir,'blue-glass.css'),'utf8'),clear:await readFile(join(dir,'clear-glass.css'),'utf8')};
 const source=(await readFile(join(dir,'theme-panel.js'),'utf8')).replace('THEMES_PLACEHOLDER',JSON.stringify(themes));
-let socket=null,seq=0,pending=new Map(),nativeQueue=Promise.resolve(),stopping=false,scriptId=null;
+let socket=null,seq=0,pending=new Map(),nativeQueue=Promise.resolve(),nativeRevision=0,stopping=false,scriptId=null;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function call(method,params={}){return new Promise((resolve,reject)=>{const id=++seq,timer=setTimeout(()=>{pending.delete(id);reject(Error('CDP timeout: '+method))},10000);pending.set(id,{resolve,reject,timer});socket.send(JSON.stringify({id,method,params}))})}
 async function native(mode,opacity=82,blur=false){const {stdout}=await exec('powershell.exe',['-NoProfile','-NonInteractive','-File',join(dir,'native-window.ps1'),'-Mode',mode,'-Opacity',String(opacity),'-Backdrop',blur?'acrylic':'clear'],{windowsHide:true,timeout:12000});return JSON.parse(stdout.trim())}
@@ -21,13 +21,16 @@ function onNative(payload){
  let value;try{value=JSON.parse(payload)}catch{return}
  if(!['set','background','restore'].includes(value.mode)||!Number.isFinite(value.opacity))return;
  const opacity=Math.max(value.mode==='background'?0:55,Math.min(100,Math.round(value.opacity)));
+ const revision=++nativeRevision;
  nativeQueue=nativeQueue.catch(()=>{}).then(async()=>{
+  if(revision!==nativeRevision||stopping)return;
   try{
    await call('Emulation.setDefaultBackgroundColorOverride',value.mode==='background'?{color:{r:0,g:0,b:0,a:0}}:{});
    await native(value.mode,opacity,value.blur===true);
-   if(socket?.readyState===1)await call('Runtime.evaluate',{expression:'window.__kenGlassNativeResult?.(true,"")'});
+   if(revision===nativeRevision&&socket?.readyState===1)await call('Runtime.evaluate',{expression:'window.__kenGlassNativeResult?.(true,"")'});
   }catch(e){
    console.error(e.message);
+   if(revision!==nativeRevision)return;
    await native('restore').catch(()=>{});
    if(socket?.readyState===1){
     await call('Emulation.setDefaultBackgroundColorOverride',{}).catch(()=>{});

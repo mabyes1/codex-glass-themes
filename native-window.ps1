@@ -44,12 +44,12 @@ if($Mode -eq 'set'){
  if($saved.backdrop -ge 0){[void][ThemeWindow]::SetBackdrop($hw,[int]$saved.backdrop)}
  $Opacity=[Math]::Max(55,[Math]::Min(100,$Opacity))
  $style=[ThemeWindow]::GetStyle($hw,-20).ToInt64()
- [void][ThemeWindow]::SetStyle($hw,-20,[IntPtr]($style -bor 0x80000))
+ if(($style -band 0x80000) -eq 0){[void][ThemeWindow]::SetStyle($hw,-20,[IntPtr]($style -bor 0x80000))}
  if(![ThemeWindow]::SetLayeredWindowAttributes($hw,0,[byte][Math]::Round($Opacity*255/100),2)){throw 'Windows rejected window opacity.'}
 }elseif($Mode -eq 'restore' -or $Mode -eq 'background'){
  if($saved.layer){$v=$saved.layer.Split(',');[void][ThemeWindow]::SetLayeredWindowAttributes($hw,[uint32]$v[0],[byte]$v[1],[uint32]$v[2])}
  else{[void][ThemeWindow]::SetLayeredWindowAttributes($hw,0,255,2)}
- [void][ThemeWindow]::SetStyle($hw,-20,[IntPtr][long]$saved.style)
+ if([ThemeWindow]::GetStyle($hw,-20).ToInt64() -ne [long]$saved.style){[void][ThemeWindow]::SetStyle($hw,-20,[IntPtr][long]$saved.style)}
  if($Mode -eq 'background'){
   $material=if($Backdrop -eq 'acrylic'){3}else{1}
   if(![ThemeWindow]::SetBackdrop($hw,$material)){throw 'Background transparency requires Windows 11 build 22621 or newer.'}

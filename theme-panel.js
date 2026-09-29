@@ -47,6 +47,25 @@
   <div id="status" role="status"></div><button id="original">還原原始外觀</button></section>`;
   document.body.append(host);
   const $=id=>shadow.getElementById(id);
+  let repairTimer=null,themeRepairs=0,backdropRepairs=0;
+  function scheduleBackdropRepair(){
+    clearTimeout(repairTimer);
+    repairTimer=setTimeout(()=>{if(!disposed&&prefs.mode!=='original')native()},80);
+  }
+  // Codex reapplies its own theme/backdrop when window or conversation state changes.
+  // Repair only those signals; never rebuild the stylesheet on every DOM mutation.
+  const themeGuard=new MutationObserver(()=>{
+    if(disposed||prefs.mode==='original'||root.getAttribute('data-theme')==='dark')return;
+    themeRepairs++;
+    root.setAttribute('data-theme','dark');
+    scheduleBackdropRepair();
+  });
+  themeGuard.observe(root,{attributes:true,attributeFilter:['data-theme']});
+  const backdropChanged=event=>{
+    if(event.data?.type!=='electron-window-opaque-surface-changed'||prefs.mode==='original')return;
+    backdropRepairs++;scheduleBackdropRepair();
+  };
+  window.addEventListener('message',backdropChanged);
   const save=()=>{try{localStorage.setItem(key,JSON.stringify(prefs))}catch{ $('status').textContent='目前可用，但無法儲存偏好。' }};
   function native(){
     $('status').textContent=prefs.mode!=='original'?'正在調整視窗透明度…':'';
@@ -116,9 +135,10 @@
   window.__kenGlassNativeResult=(ok,message)=>{if(!disposed)$('status').textContent=ok?(prefs.mode==='original'?'已還原原始外觀':prefs.keepForeground?'前景清晰 · 背景 '+prefs.backgroundOpacity+'% · '+(prefs.backgroundBlur?'Acrylic':'清透玻璃'):'共用不透明度 · '+prefs.opacity+'%'):message};
   window.__kenGlassPanel={
     getState:()=>({...prefs,hasImage:!!imageURL}),
+    getDiagnostics:()=>({themeRepairs,backdropRepairs}),
     importFile,
     open:()=>open(true),
-    dispose(restore=true){disposed=true;document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);host.remove();backgroundLayer.remove();foregroundStyle.remove();if(restore){style.remove();const t=window.__kenGlassOriginalTheme;t===null?root.removeAttribute('data-theme'):root.setAttribute('data-theme',t);delete window.__kenGlassOriginalTheme}delete window.__kenGlassPanel;}
+    dispose(restore=true){disposed=true;themeGuard.disconnect();clearTimeout(repairTimer);window.removeEventListener('message',backdropChanged);document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);host.remove();backgroundLayer.remove();foregroundStyle.remove();if(restore){style.remove();const t=window.__kenGlassOriginalTheme;t===null?root.removeAttribute('data-theme'):root.setAttribute('data-theme',t);delete window.__kenGlassOriginalTheme}delete window.__kenGlassPanel;}
   };
   apply();
   loadImage().then(url=>{if(disposed)return;if(url){imageURL=url;if(prefs.mode==='image')apply(false)}}).catch(()=>{if(!disposed&&prefs.mode==='image')$('status').textContent='無法讀取已儲存的圖片，請重新選擇。'});
