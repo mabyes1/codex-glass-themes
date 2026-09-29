@@ -21,20 +21,20 @@
 - Windows 11 與已安裝的 Codex 桌面版。
 - Node.js **22.15 或更新版本**，`node.exe` 可從 PATH 執行。
 - Windows PowerShell 5.1，能執行下載後的本機腳本。
-- Codex 已啟用本機 CDP，連接埠可以變動；助手會從目前的 Codex 主程序自動尋找。
+- 桌面執行檔會檢查 Codex 是否啟用本機 CDP。若沒有，會關閉並重新開啟 Codex；連接埠可以變動。
 
 實際驗證的 Codex 版本是 **26.924.2738.0**，主程序名稱為 `ChatGPT.exe`，Microsoft Store 套件為 `OpenAI.Codex`。其他版本、安裝方式和作業系統尚未驗證。
 
 ## 啟動
 
 1. 下載並解壓縮套件，或 clone 這個 repo。
-2. 確認 Codex 已開啟 CDP。可在 PowerShell 檢查目前的連接埠：
+2. 直接啟動桌面執行檔或 `Start-Theme-Switcher.cmd`。若 Codex 已開啟 CDP，會直接連線；若目前未啟用 CDP，會重新開啟 Codex，再接上玻璃佈景。**執行前請先送出或保存未完成的輸入內容**，因為重開 Codex 可能清掉草稿。可用下列命令只檢查目前是否需要重開：
 
    ```powershell
-   powershell -NoProfile -File .\find-codex-cdp.ps1
+   powershell -NoProfile -File .\Ensure-CodexCdp.ps1 -CheckOnly
    ```
 
-   若尚未開啟，先完成並關閉正在執行的 Codex 工作，再完全退出 Codex。Microsoft Store 安裝版可以這樣啟動：
+   若想自行開啟 CDP，Microsoft Store 安裝版也可以這樣啟動：
 
    ```powershell
    $codexPackage = Get-AppxPackage -Name OpenAI.Codex
@@ -45,10 +45,9 @@
 
    上述命令適用於已驗證版本的安裝結構；本專案的驗證使用既有 CDP 工作階段，沒有重新啟動 Codex 測試此步驟。CDP 可控制應用程式，請維持在 loopback，不要公開到區域網路或網際網路。
 
-3. 雙擊 **`Start-Theme-Switcher.cmd`**。
-4. 點選 Codex 右上角 **「◈ 佈景」**，選擇佈景、配色或圖片，再調整共用不透明度。
+3. 點選 Codex 右上角 **「◈ 佈景」**，選擇佈景、配色或圖片，再調整共用不透明度。
 
-不需要 `npm install`。背景助手會在頁面重新載入或 Codex 重開、CDP 連接埠改變後重新連線，補上切換器。未設定 Windows 開機自動啟動；同一台電腦請只執行一份助手。若新的 Codex 工作階段沒有啟用 CDP，請依上面的步驟開啟後，再點桌面啟動檔。
+不需要 `npm install`。背景助手會在頁面重新載入或 Codex 重開、CDP 連接埠改變後重新連線，補上切換器。若新的 Codex 工作階段沒有啟用 CDP，再按桌面執行檔即可重新開啟 Codex 並接上佈景。未設定 Windows 開機自動啟動；同一台電腦請只執行一份助手。
 
 ## 建立桌面執行檔
 
@@ -80,10 +79,11 @@
 | `silver-glass.css` | 銀白亮面玻璃 |
 | `Theme-Switcher.ps1` | 隱藏背景啟動／停止助手 |
 | `find-codex-cdp.ps1` | 尋找目前 Codex 主視窗使用的本機 CDP 連接埠 |
+| `Ensure-CodexCdp.ps1` | 必要時重新開啟 Codex，讓 CDP 可用 |
 | `GlassLauncher.cs`、`Build-Desktop-Launcher.ps1` | 產生桌面單一啟動執行檔 |
 
 ## 驗證範圍
 
-已在上述單機版本實際確認：佈景切換、三色調色與還原、跨佈景共用透明度、自訂圖片顯示和 IndexedDB 儲存、新對話輸入框在各佈景的效果、助手停止後原生視窗樣式還原、重新啟動助手後偏好保留，以及桌面執行檔接上新的 CDP 連接埠。封裝檢查使用 `npm run check` 及 PowerShell 語法解析。完整退出再重開 Codex 的流程未在同一段聊天中測試，以免中斷目前的工作。
+已在上述單機版本實際確認：佈景切換、三色調色與還原、跨佈景共用透明度、自訂圖片顯示和 IndexedDB 儲存、新對話輸入框在各佈景的效果、助手停止後原生視窗樣式還原、重新啟動助手後偏好保留，以及桌面執行檔接上變動後的 CDP 連接埠。此次另確認「目前 Codex 沒有 CDP」會被辨識為需要重開；桌面執行檔的實際重開流程尚未在目前聊天中執行，以免中斷正在進行的工作。封裝檢查使用 `npm run check` 及 PowerShell 語法解析。
 
 介面選擇器依賴 Codex 的 DOM 結構，更新後可能需要調整。多個 Codex 主視窗目前不支援精確配對；請以單一主視窗使用。
