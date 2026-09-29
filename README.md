@@ -21,14 +21,14 @@
 - Windows 11 與已安裝的 Codex 桌面版。
 - Node.js **22.15 或更新版本**，`node.exe` 可從 PATH 執行。
 - Windows PowerShell 5.1，能執行下載後的本機腳本。
-- 桌面執行檔會檢查 Codex 是否啟用本機 CDP。若沒有，會關閉並重新開啟 Codex；連接埠可以變動。
+- 桌面執行檔會檢查 Codex 是否啟用本機 CDP；連接埠可以變動。若目前的 Codex 沒有 CDP，它會提示你先自行結束 Codex，不會強制關閉正在使用的視窗。
 
 實際驗證的 Codex 版本是 **26.924.2738.0**，主程序名稱為 `ChatGPT.exe`，Microsoft Store 套件為 `OpenAI.Codex`。其他版本、安裝方式和作業系統尚未驗證。
 
 ## 啟動
 
 1. 下載並解壓縮套件，或 clone 這個 repo。
-2. 直接啟動桌面執行檔或 `Start-Theme-Switcher.cmd`。若 Codex 已開啟 CDP，會直接連線；若目前未啟用 CDP，會重新開啟 Codex，再接上玻璃佈景。**執行前請先送出或保存未完成的輸入內容**，因為重開 Codex 可能清掉草稿。可用下列命令只檢查目前是否需要重開：
+2. 直接啟動桌面執行檔或 `Start-Theme-Switcher.cmd`。若 Codex 已開啟 CDP，會直接連線。若目前未啟用 CDP，請先送出或保存未完成的輸入內容，**自行結束 Codex**，再雙擊桌面執行檔啟動帶 CDP 的 Codex。可用下列命令只檢查目前是否需要重新啟動：
 
    ```powershell
    powershell -NoProfile -File .\Ensure-CodexCdp.ps1 -CheckOnly
@@ -47,7 +47,7 @@
 
 3. 點選 Codex 右上角 **「◈ 佈景」**，選擇佈景、配色或圖片，再調整共用不透明度。
 
-不需要 `npm install`。背景助手會在頁面重新載入或 Codex 重開、CDP 連接埠改變後重新連線，補上切換器。若新的 Codex 工作階段沒有啟用 CDP，再按桌面執行檔即可重新開啟 Codex 並接上佈景。未設定 Windows 開機自動啟動；同一台電腦請只執行一份助手。
+不需要 `npm install`。背景助手會在頁面重新載入或 Codex 重開、CDP 連接埠改變後重新連線，補上切換器。若新的 Codex 工作階段沒有啟用 CDP，需要自行結束它，再透過桌面執行檔啟動。AGENTS.md 可以提醒代理在新對話中檢查並接回佈景，但無法替已執行的 Electron 程序新增啟動參數，也不會在代理執行前改變畫面。未設定 Windows 開機自動啟動；同一台電腦請只執行一份助手。
 
 ## 建立桌面執行檔
 
@@ -79,11 +79,11 @@
 | `silver-glass.css` | 銀白亮面玻璃 |
 | `Theme-Switcher.ps1` | 隱藏背景啟動／停止助手 |
 | `find-codex-cdp.ps1` | 尋找目前 Codex 主視窗使用的本機 CDP 連接埠 |
-| `Ensure-CodexCdp.ps1` | 必要時重新開啟 Codex，讓 CDP 可用 |
+| `Ensure-CodexCdp.ps1` | 檢查 CDP；若 Codex 未執行，帶 CDP 參數啟動 |
 | `GlassLauncher.cs`、`Build-Desktop-Launcher.ps1` | 產生桌面單一啟動執行檔 |
 
 ## 驗證範圍
 
-已在上述單機版本實際確認：佈景切換、三色調色與還原、跨佈景共用透明度、自訂圖片顯示和 IndexedDB 儲存、新對話輸入框在各佈景的效果、助手停止後原生視窗樣式還原、重新啟動助手後偏好保留，以及桌面執行檔接上變動後的 CDP 連接埠。此次另確認「目前 Codex 沒有 CDP」會被辨識為需要重開；桌面執行檔的實際重開流程尚未在目前聊天中執行，以免中斷正在進行的工作。封裝檢查使用 `npm run check` 及 PowerShell 語法解析。
+已在上述單機版本實際確認：佈景切換、三色調色與還原、跨佈景共用透明度、自訂圖片顯示和 IndexedDB 儲存、新對話輸入框在各佈景的效果、助手停止後原生視窗樣式還原、重新啟動助手後偏好保留，以及桌面執行檔接上變動後的 CDP 連接埠。此次另確認「目前 Codex 沒有 CDP」會被辨識為需要重開；從完全關閉狀態由桌面執行檔啟動 Codex 尚未在目前聊天中測試，以免中斷正在進行的工作。
 
 介面選擇器依賴 Codex 的 DOM 結構，更新後可能需要調整。多個 Codex 主視窗目前不支援精確配對；請以單一主視窗使用。

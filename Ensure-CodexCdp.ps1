@@ -47,22 +47,14 @@ if($CheckOnly){
     exit 0
 }
 
+if($codexProcess){
+    throw '目前開啟的 Codex 沒有啟用 CDP。請先自行結束 Codex，再從桌面的 Codex Glass Themes.exe 啟動；切換器不會強制關閉正在使用的視窗。'
+}
+
 $listener=[System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback,0)
 $listener.Start()
 $cdpPort=([System.Net.IPEndPoint]$listener.LocalEndpoint).Port
 $listener.Stop()
-
-if($codexProcess){
-    $oldProcess=Get-Process -Id $codexProcess.ProcessId -ErrorAction SilentlyContinue
-    if($oldProcess){
-        [void]$oldProcess.CloseMainWindow()
-        try{Wait-Process -Id $oldProcess.Id -Timeout 12 -ErrorAction Stop}catch{}
-        if(Get-Process -Id $oldProcess.Id -ErrorAction SilentlyContinue){
-            Stop-Process -Id $oldProcess.Id -Force -ErrorAction Stop
-            try{Wait-Process -Id $oldProcess.Id -Timeout 5 -ErrorAction Stop}catch{}
-        }
-    }
-}
 
 Start-Process -FilePath $codexExecutable -ArgumentList @('--remote-debugging-address=127.0.0.1',"--remote-debugging-port=$cdpPort")
 for($attempt=0;$attempt -lt 60;$attempt++){
