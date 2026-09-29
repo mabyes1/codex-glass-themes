@@ -49,7 +49,7 @@ if($CheckOnly){
 }
 
 if($codexProcess){
-    throw '目前開啟的 Codex 沒有啟用 CDP。請先自行結束 Codex，再從桌面的 Codex Glass Themes.exe 啟動；切換器不會強制關閉正在使用的視窗。'
+    throw 'Codex is running without CDP. Quit Codex yourself, then launch Codex Glass Themes.exe. The launcher will not close your current window.'
 }
 
 $listener=[System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback,0)
