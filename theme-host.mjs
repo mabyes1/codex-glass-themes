@@ -7,7 +7,7 @@ const exec=promisify(execFile),dir=dirname(fileURLToPath(import.meta.url)),runti
 await mkdir(runtime,{recursive:true});
 const stopFile=join(runtime,'stop'),pidFile=join(runtime,'host.pid');
 await unlink(stopFile).catch(()=>{});await writeFile(pidFile,String(process.pid));
-const themes={blue:await readFile(join(dir,'blue-glass.css'),'utf8'),silver:await readFile(join(dir,'silver-glass.css'),'utf8')};
+const themes={color:await readFile(join(dir,'blue-glass.css'),'utf8'),clear:await readFile(join(dir,'clear-glass.css'),'utf8')};
 const source=(await readFile(join(dir,'theme-panel.js'),'utf8')).replace('THEMES_PLACEHOLDER',JSON.stringify(themes));
 let socket=null,seq=0,pending=new Map(),nativeQueue=Promise.resolve(),stopping=false,scriptId=null;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));

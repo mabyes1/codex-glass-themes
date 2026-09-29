@@ -1,0 +1,64 @@
+/* Neutral clear glass: no colored gradients, with white foreground content. */
+:root {
+ color-scheme:dark;
+ --color-surface:rgba(0,0,0,.12)!important;
+ --color-surface-secondary:rgba(0,0,0,.16)!important;
+ --color-surface-tertiary:rgba(255,255,255,.12)!important;
+ --color-surface-elevated:rgba(22,22,22,.96)!important;
+ --color-surface-elevated-secondary:rgba(28,28,28,.92)!important;
+ --color-surface-card:rgba(0,0,0,.14)!important;
+ --app-color-background-surface:rgba(0,0,0,.12)!important;
+ --app-color-background-surface-under:transparent!important;
+ --color-token-main-surface-primary:transparent!important;
+ --color-token-side-bar-background:transparent!important;
+ --chat-background-color:transparent!important;
+ --color-border:rgba(255,255,255,.20)!important;
+ --color-border-default:rgba(255,255,255,.20)!important;
+ --color-token-border-default:rgba(255,255,255,.20)!important;
+ --app-color-border:rgba(255,255,255,.20)!important;
+ --color-text-primary:#fff!important;
+ --color-text-secondary:#ededed!important;
+ --color-text-tertiary:#d8d8d8!important;
+ --color-text:#fff!important;
+ --app-color-text-foreground:#fff!important;
+ --app-color-text-foreground-primary:#fff!important;
+ --app-color-text-foreground-secondary:#ededed!important;
+ --color-codex-icon:#fff!important;
+ --color-codex-icon-active:#fff!important;
+ --app-color-icon-primary:#fff!important;
+ --app-color-icon-secondary:#ededed!important;
+ --app-color-icon-tertiary:#d8d8d8!important;
+ --user-message-text-color:#fff!important;
+ --color-text-user-message:#fff!important;
+ --user-message-background-color:rgba(0,0,0,.18)!important;
+}
+html,body{background:#000!important;}
+body{color:#fff!important;text-shadow:0 1px 3px #0009;}
+body::before,body::after{display:none!important;}
+main[class*='_MainContentSurface_']{
+ background:rgba(0,0,0,.10)!important;backdrop-filter:none!important;
+ box-shadow:inset 1px 1px 0 #ffffff20!important;
+}
+aside.app-shell-left-panel{
+ background:rgba(0,0,0,.12)!important;backdrop-filter:none!important;
+ border-right:1px solid #ffffff30!important;
+}
+[data-composer-surface-variant],[data-composer-body]{
+ color:#fff!important;
+ --color-text-primary:#fff!important;
+ --color-text-secondary:#ededed!important;
+ --color-text-tertiary:#d8d8d8!important;
+ background:rgba(0,0,0,.18)!important;backdrop-filter:none!important;
+ box-shadow:inset 0 0 0 1px #ffffff40,inset 0 1px 0 #ffffff38,0 8px 24px #0002!important;
+}
+[data-composer-placement="home"] [data-composer-surface-variant]{background:transparent!important;box-shadow:none!important;}
+[data-composer-placement="home"] [data-composer-body]{border:1px solid #ffffff40!important;border-radius:22px!important;}
+[data-user-message-bubble]{
+ --color-text-primary:#fff!important;--color-text:#fff!important;
+ background:rgba(0,0,0,.18)!important;color:#fff!important;
+ box-shadow:inset 0 1px 0 #ffffff30!important;
+}
+nav[class*='sidebar-rail'],aside.app-shell-left-panel{color:#fff!important;}
+nav[class*='sidebar-rail'] button,aside.app-shell-left-panel button{color:inherit;}
+[role='dialog'],[role='menu']{backdrop-filter:none!important;box-shadow:0 12px 32px #0005,inset 0 1px 0 #ffffff20!important;}
+.thread-scroll-container .bg-gradient-to-t.from-surface.via-surface{background:none!important;}
