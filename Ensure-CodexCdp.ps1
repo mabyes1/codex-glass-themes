@@ -39,6 +39,7 @@ if($codexProcess){
     $package=Get-AppxPackage -Name OpenAI.Codex -ErrorAction SilentlyContinue | Select-Object -First 1
     if(!$package){throw 'Codex is not installed as OpenAI.Codex.'}
     $codexExecutable=Join-Path $package.InstallLocation 'app/ChatGPT.exe'
+    $appUserModelId=$package.PackageFamilyName+'!App'
 }
 if(!(Test-Path -LiteralPath $codexExecutable)){throw 'Codex executable was not found.'}
 
@@ -56,7 +57,7 @@ $listener.Start()
 $cdpPort=([System.Net.IPEndPoint]$listener.LocalEndpoint).Port
 $listener.Stop()
 
-Start-Process -FilePath $codexExecutable -ArgumentList @('--remote-debugging-address=127.0.0.1',"--remote-debugging-port=$cdpPort")
+& (Join-Path $PSScriptRoot 'Start-PackagedCodex.ps1') -AppUserModelId $appUserModelId -Port $cdpPort | Out-Null
 for($attempt=0;$attempt -lt 60;$attempt++){
     Start-Sleep -Milliseconds 500
     $readyPort=Get-ReadyPort

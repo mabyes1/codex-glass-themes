@@ -34,16 +34,7 @@
    powershell -NoProfile -File .\Ensure-CodexCdp.ps1 -CheckOnly
    ```
 
-   若想自行開啟 CDP，Microsoft Store 安裝版也可以這樣啟動：
-
-   ```powershell
-   $codexPackage = Get-AppxPackage -Name OpenAI.Codex
-   if (-not $codexPackage) { throw '找不到 OpenAI.Codex 套件。' }
-   $codexExecutable = Join-Path $codexPackage.InstallLocation 'app/ChatGPT.exe'
-   Start-Process -FilePath $codexExecutable -ArgumentList '--remote-debugging-address=127.0.0.1','--remote-debugging-port=3134'
-   ```
-
-   上述命令適用於已驗證版本的安裝結構；本專案的驗證使用既有 CDP 工作階段，沒有重新啟動 Codex 測試此步驟。CDP 可控制應用程式，請維持在 loopback，不要公開到區域網路或網際網路。
+   Microsoft Store 版本由桌面執行檔透過 Windows 套件啟動 API 帶入 CDP 參數；不要直接執行受保護的 `WindowsApps` 內的 `ChatGPT.exe`。這段啟動流程仍需在 Codex 完全關閉時實測。CDP 可控制應用程式，請維持在 loopback，不要公開到區域網路或網際網路。
 
 3. 點選 Codex 右上角 **「◈ 佈景」**，選擇佈景、配色或圖片，再調整共用不透明度。
 
@@ -80,6 +71,7 @@
 | `Theme-Switcher.ps1` | 隱藏背景啟動／停止助手 |
 | `find-codex-cdp.ps1` | 尋找目前 Codex 主視窗使用的本機 CDP 連接埠 |
 | `Ensure-CodexCdp.ps1` | 檢查 CDP；若 Codex 未執行，帶 CDP 參數啟動 |
+| `Start-PackagedCodex.ps1` | 透過 Windows 套件啟動 API 啟動 Store 版 Codex |
 | `GlassLauncher.cs`、`Build-Desktop-Launcher.ps1` | 產生桌面單一啟動執行檔 |
 
 ## 驗證範圍
