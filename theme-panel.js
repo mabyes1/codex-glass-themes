@@ -6,15 +6,21 @@
   if(window.__kenGlassOriginalTheme===undefined)window.__kenGlassOriginalTheme=root.getAttribute('data-theme');
   const key='ken-glass-preferences-v1';
   let prefs;try{prefs=JSON.parse(localStorage.getItem(key)||'{}')}catch{prefs={}}
-  prefs={mode:'desktop',opacity:82,imageShade:28,colors:{base:'#111d30',left:'#3b91b3',right:'#7e55a7'},...prefs};
+  prefs={mode:'desktop',opacity:82,keepForeground:false,backgroundOpacity:45,backgroundBlur:false,imageShade:28,colors:{base:'#111d30',left:'#3b91b3',right:'#7e55a7'},...prefs};
   if(!['desktop','blue','silver','image','original'].includes(prefs.mode))prefs.mode='desktop';
   prefs.opacity=Math.max(55,Math.min(100,Number(prefs.opacity)||82));
+  prefs.keepForeground=prefs.keepForeground===true;
+  prefs.backgroundBlur=prefs.backgroundBlur===true;
+  prefs.backgroundOpacity=Number.isFinite(Number(prefs.backgroundOpacity))?Math.max(0,Math.min(100,Number(prefs.backgroundOpacity))):45;
   prefs.imageShade=Math.max(0,Math.min(65,Number(prefs.imageShade)||28));
   prefs.colors={base:'#111d30',left:'#3b91b3',right:'#7e55a7',...prefs.colors};
   for(const k of ['base','left','right'])if(!/^#[0-9a-f]{6}$/i.test(prefs.colors[k]))prefs.colors[k]={base:'#111d30',left:'#3b91b3',right:'#7e55a7'}[k];
   let imageURL='',disposed=false;
   let style=document.getElementById('ken-codex-glass');
   if(!style){style=document.createElement('style');style.id='ken-codex-glass';document.head.append(style)}
+  const backgroundLayer=document.createElement('div');backgroundLayer.id='ken-glass-background';backgroundLayer.setAttribute('aria-hidden','true');
+  backgroundLayer.style.cssText='position:fixed;inset:0;z-index:-1;pointer-events:none;';document.body.prepend(backgroundLayer);
+  const foregroundStyle=document.createElement('style');foregroundStyle.id='ken-glass-foreground';document.head.append(foregroundStyle);
   const host=document.createElement('div');host.id='ken-glass-switcher';
   host.style.cssText='position:fixed;top:8px;right:160px;z-index:2147483000;-webkit-app-region:no-drag;';
   const shadow=host.attachShadow({mode:'open'});
@@ -36,7 +42,7 @@
   <button class="choice" data-mode="image">自訂圖片<span>選一張自己的背景</span></button>
   </div>
   <div class="control" id="palette-control" hidden><div class="palette"><label>底色<input id="color-base" type="color"></label><label>左側光暈<input id="color-left" type="color"></label><label>右側光暈<input id="color-right" type="color"></label></div><button class="action" id="reset-colors">還原第一版配色</button></div>
-  <div class="control" id="desktop-control"><label for="opacity">視窗不透明度 <output id="opacity-value"></output></label><input id="opacity" type="range" min="55" max="100" step="1"><p class="note">所有佈景共用。100% 完全不透明；降低後會透出桌面，文字也會一起變透明。</p></div>
+  <div class="control" id="desktop-control"><label for="keep-foreground">保持前景清晰<input id="keep-foreground" type="checkbox"></label><label for="opacity" style="margin-top:12px"><span id="opacity-label">視窗不透明度</span><output id="opacity-value"></output></label><input id="opacity" type="range" min="55" max="100" step="1"><p class="note" id="opacity-note"></p><label id="blur-control" for="background-blur" style="margin-top:10px" hidden>模糊背後背景（Acrylic）<input id="background-blur" type="checkbox"></label></div>
   <div class="control" id="image-control" hidden><button class="action" id="choose">選擇圖片…</button><input id="file" type="file" accept="image/png,image/jpeg,image/webp,image/avif" hidden><label for="shade" style="margin-top:12px">圖片暗化 <output id="shade-value"></output></label><input id="shade" type="range" min="0" max="65"><p class="note">圖片只存在本機，不會上傳。支援 PNG、JPG、WebP、AVIF，最大 12 MB。</p></div>
   <div id="status" role="status"></div><button id="original">還原原始外觀</button></section>`;
   document.body.append(host);
@@ -44,11 +50,12 @@
   const save=()=>{try{localStorage.setItem(key,JSON.stringify(prefs))}catch{ $('status').textContent='目前可用，但無法儲存偏好。' }};
   function native(){
     $('status').textContent=prefs.mode!=='original'?'正在調整視窗透明度…':'';
-    if(typeof window.__kenGlassNative==='function')window.__kenGlassNative(JSON.stringify({mode:prefs.mode==='original'||prefs.opacity===100?'restore':'set',opacity:prefs.opacity}));
+    if(typeof window.__kenGlassNative==='function')window.__kenGlassNative(JSON.stringify({mode:prefs.mode==='original'?'restore':prefs.keepForeground?'background':prefs.opacity===100?'restore':'set',opacity:prefs.keepForeground?prefs.backgroundOpacity:prefs.opacity,blur:prefs.backgroundBlur}));
     else if(prefs.mode!=='original')$('status').textContent='透明度助手未連線，請執行「啟動佈景切換器」。';
   }
   function apply(updateNative=true){
     const mode=prefs.mode;
+    foregroundStyle.textContent='';backgroundLayer.hidden=true;
     root.setAttribute('data-theme',mode==='blue'||mode==='image'?'dark':'light');
     if(mode==='original'){
       style.textContent='';const t=window.__kenGlassOriginalTheme;t===null?root.removeAttribute('data-theme'):root.setAttribute('data-theme',t);
@@ -63,9 +70,20 @@
     else {
       style.textContent=themes.blue+`\nhtml{background:#182029!important}body{background-color:#182029!important;background-image:${imageURL?'url('+JSON.stringify(imageURL)+')':'none'}!important;background-size:cover!important;background-position:center!important;background-attachment:fixed!important;box-shadow:inset 0 0 0 100vmax rgba(0,0,0,${prefs.imageShade/100})!important}body::before,body::after{display:none!important}main[class*='_MainContentSurface_'],aside.app-shell-left-panel,[data-composer-surface-variant]{backdrop-filter:none!important}aside.app-shell-left-panel{background:rgba(15,22,32,.22)!important}[data-composer-surface-variant],[data-user-message-bubble],[data-composer-placement="home"] [data-composer-body]{background:rgba(255,255,255,.12)!important}`;
     }
+    if(mode!=='original'&&prefs.keepForeground){
+      // Fade a separate background plane, never the container of the text.
+      const surface=getComputedStyle(document.body);
+      for(const name of ['backgroundColor','backgroundImage','backgroundSize','backgroundPosition','backgroundRepeat','backgroundAttachment','boxShadow'])backgroundLayer.style[name]=surface[name];
+      backgroundLayer.style.opacity=String(prefs.backgroundOpacity/100);backgroundLayer.hidden=false;
+      foregroundStyle.textContent=`html{background:transparent!important}body{background:transparent!important;box-shadow:none!important;isolation:isolate}body::before,body::after{opacity:${prefs.backgroundOpacity/100}!important}main[class*='_MainContentSurface_'],aside.app-shell-left-panel,[data-composer-surface-variant],[data-composer-body]{backdrop-filter:none!important}`;
+    }
     shadow.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));
     $('desktop-control').hidden=mode==='original';$('palette-control').hidden=mode!=='blue';$('image-control').hidden=mode!=='image';for(const k of ['base','left','right'])$('color-'+k).value=prefs.colors[k];
-    $('opacity').value=prefs.opacity;$('opacity-value').textContent=prefs.opacity+'%';
+    $('keep-foreground').checked=prefs.keepForeground;$('background-blur').checked=prefs.backgroundBlur;
+    $('blur-control').hidden=!prefs.keepForeground;
+    $('opacity').min=prefs.keepForeground?'0':'55';$('opacity').value=prefs.keepForeground?prefs.backgroundOpacity:prefs.opacity;$('opacity-value').textContent=$('opacity').value+'%';
+    $('opacity-label').textContent=prefs.keepForeground?'背景不透明度':'視窗不透明度';
+    $('opacity-note').textContent=prefs.keepForeground?'所有佈景共用，只淡化背景；文字和按鈕維持不透明。關閉模糊就是清透玻璃。':'所有佈景共用。100% 完全不透明；降低後文字也會一起變透明。';
     $('shade').value=prefs.imageShade;$('shade-value').textContent=prefs.imageShade+'%';
     if(updateNative)native();save();
   }
@@ -76,7 +94,9 @@
   $('reset-colors').onclick=()=>{prefs.colors={base:'#111d30',left:'#3b91b3',right:'#7e55a7'};apply(false)};
   $('original').onclick=()=>{prefs.mode='original';apply()};
   $('opacity').oninput=()=>{$('opacity-value').textContent=$('opacity').value+'%'};
-  $('opacity').onchange=()=>{prefs.opacity=Number($('opacity').value);native();save()};
+  $('opacity').onchange=()=>{prefs[prefs.keepForeground?'backgroundOpacity':'opacity']=Number($('opacity').value);apply()};
+  $('keep-foreground').onchange=()=>{prefs.keepForeground=$('keep-foreground').checked;apply()};
+  $('background-blur').onchange=()=>{prefs.backgroundBlur=$('background-blur').checked;native();save()};
   $('shade').oninput=()=>{prefs.imageShade=Number($('shade').value);apply(false)};
   $('choose').onclick=()=>$('file').click();
   function database(){return new Promise((resolve,reject)=>{const request=indexedDB.open('ken-glass-images',1);request.onupgradeneeded=()=>request.result.createObjectStore('images');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)})}
@@ -94,12 +114,12 @@
   const outside=e=>{if(!e.composedPath().includes(host))open(false)};
   const escape=e=>{if(e.key==='Escape')open(false)};
   document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);
-  window.__kenGlassNativeResult=(ok,message)=>{if(!disposed)$('status').textContent=ok?(prefs.mode==='original'?'已還原原始外觀':'共用不透明度 · '+prefs.opacity+'%'):message};
+  window.__kenGlassNativeResult=(ok,message)=>{if(!disposed)$('status').textContent=ok?(prefs.mode==='original'?'已還原原始外觀':prefs.keepForeground?'前景清晰 · 背景 '+prefs.backgroundOpacity+'% · '+(prefs.backgroundBlur?'Acrylic':'清透玻璃'):'共用不透明度 · '+prefs.opacity+'%'):message};
   window.__kenGlassPanel={
     getState:()=>({...prefs,hasImage:!!imageURL}),
     importFile,
     open:()=>open(true),
-    dispose(restore=true){disposed=true;document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);host.remove();if(restore){style.remove();const t=window.__kenGlassOriginalTheme;t===null?root.removeAttribute('data-theme'):root.setAttribute('data-theme',t);delete window.__kenGlassOriginalTheme}delete window.__kenGlassPanel;}
+    dispose(restore=true){disposed=true;document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);host.remove();backgroundLayer.remove();foregroundStyle.remove();if(restore){style.remove();const t=window.__kenGlassOriginalTheme;t===null?root.removeAttribute('data-theme'):root.setAttribute('data-theme',t);delete window.__kenGlassOriginalTheme}delete window.__kenGlassPanel;}
   };
   apply();
   loadImage().then(url=>{if(disposed)return;if(url){imageURL=url;if(prefs.mode==='image')apply(false)}}).catch(()=>{if(!disposed&&prefs.mode==='image')$('status').textContent='無法讀取已儲存的圖片，請重新選擇。'});
