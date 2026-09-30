@@ -10,22 +10,34 @@ export async function startBackdropWatch(dir, runtime, exec, onMismatch) {
   if (!built || built.mtimeMs < (await stat(source)).mtimeMs) {
     const compiler = join(process.env.WINDIR, 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe');
     await access(compiler);
-    await exec(compiler, ['/nologo', '/target:exe', '/out:' + executable, source], {windowsHide:true, timeout:12000});
+    await exec(compiler, ['/nologo', '/target:exe', '/reference:System.Windows.Forms.dll', '/out:' + executable, source], {windowsHide:true, timeout:12000});
   }
   const child = spawn(executable, [], {windowsHide:true, stdio:['pipe','pipe','pipe']});
   await new Promise((resolve,reject) => { child.once('spawn', resolve); child.once('error', reject); });
   const closed = new Promise(resolve => child.once('close', resolve));
   const lines = createInterface({input:child.stdout});
+  let statsRequest = null;
   lines.on('line', line => {
     const match = /^MISMATCH (\d+) (-?\d+) ([13])$/.exec(line);
     if (match) onMismatch({handle:Number(match[1]),actual:Number(match[2]),expected:Number(match[3])});
+    const stats = /^STATS (\d+) (\d+)$/.exec(line);
+    if (stats && statsRequest) { statsRequest.resolve({checks:Number(stats[1]),notifications:Number(stats[2])}); statsRequest = null; }
   });
   child.stderr.on('data', chunk => console.error('Backdrop watcher:', String(chunk).trim()));
   child.stdin.on('error', error => console.error('Backdrop watcher pipe:', error.message));
   const send = command => { if (!child.killed && child.stdin.writable) child.stdin.write(command + '\n'); };
   return {
     off:() => send('OFF'),
+    check:() => send('CHECK'),
     watch:(handle, expected) => send(`WATCH ${handle} ${expected}`),
+    async stats() {
+      if (statsRequest) return statsRequest.promise;
+      let resolve;
+      const promise = new Promise(r => { resolve = r; });
+      statsRequest = {promise,resolve}; send('STATS');
+      const timeout = setTimeout(() => { if (statsRequest?.promise === promise) { statsRequest = null; resolve(null); } },1000);
+      try { return await promise; } finally { clearTimeout(timeout); }
+    },
     async stop() {
       send('STOP'); child.stdin.end();
       const timeout = setTimeout(() => child.kill(), 2000);

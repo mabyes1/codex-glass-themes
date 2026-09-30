@@ -7,6 +7,7 @@ public class ThemeWindow {
  [StructLayout(LayoutKind.Sequential)]public struct Rect{public int L,T,R,B;}
  [DllImport("user32.dll")]public static extern bool EnumWindows(EnumProc cb,IntPtr p);
  [DllImport("user32.dll")]public static extern bool IsWindowVisible(IntPtr h);
+ [DllImport("user32.dll")]public static extern bool IsWindow(IntPtr h);
  [DllImport("user32.dll")]public static extern uint GetWindowThreadProcessId(IntPtr h,out uint pid);
  [DllImport("user32.dll")]public static extern bool GetWindowRect(IntPtr h,out Rect r);
  [DllImport("user32.dll",EntryPoint="GetWindowLongPtrW")]public static extern IntPtr GetStyle(IntPtr h,int n);
@@ -19,21 +20,26 @@ public class ThemeWindow {
  [DllImport("dwmapi.dll")]public static extern int DwmFlush();
  public static int Backdrop(IntPtr h){int value;return DwmGetWindowAttribute(h,38,out value,4)==0?value:-1;}
  public static bool SetBackdrop(IntPtr h,int value){return DwmSetWindowAttribute(h,38,ref value,4)==0;}
- public static long Find(uint pid){long best=0,area=0;EnumWindows((h,p)=>{uint id;GetWindowThreadProcessId(h,out id);Rect r;if(id==pid&&IsWindowVisible(h)&&GetWindowRect(h,out r)){long a=(long)(r.R-r.L)*(r.B-r.T);if(a>area){area=a;best=h.ToInt64();}}return true;},IntPtr.Zero);return best;}
+ public static long Find(uint pid,long preferred){uint owner;IntPtr known=new IntPtr(preferred);GetWindowThreadProcessId(known,out owner);if(preferred!=0&&IsWindow(known)&&owner==pid&&(GetStyle(known,-20).ToInt64()&0x80)==0)return preferred;long best=0,area=0;EnumWindows((h,p)=>{uint id;GetWindowThreadProcessId(h,out id);Rect r;if(id==pid&&IsWindowVisible(h)&&(GetStyle(h,-20).ToInt64()&0x80)==0&&GetWindowRect(h,out r)){long a=(long)(r.R-r.L)*(r.B-r.T);if(a>area){area=a;best=h.ToInt64();}}return true;},IntPtr.Zero);return best;}
  public static string Layer(IntPtr h){uint k,f;byte a;bool ok=GetLayeredWindowAttributes(h,out k,out a,out f);return ok?String.Format("{0},{1},{2}",k,a,f):"";}
 }
 '@
 $proc=Get-CimInstance Win32_Process -Filter "Name='ChatGPT.exe'" | Where-Object {$_.CommandLine -notmatch '--type=' -and $_.ExecutablePath -match 'OpenAI.Codex'} | Select-Object -First 1
 if(!$proc){throw 'Codex is not running.'}
-$handle=[ThemeWindow]::Find([uint32]$proc.ProcessId)
-if(!$handle){throw 'Codex main window was not found.'}
-$hw=[IntPtr]$handle
 $stateDir=Join-Path $PSScriptRoot '.runtime'
-New-Item -ItemType Directory -Force $stateDir | Out-Null
 $stateFile=Join-Path $stateDir 'native-original.json'
 $start=(Get-Process -Id $proc.ProcessId).StartTime.ToUniversalTime().ToString('o')
 $saved=$null
 if(Test-Path $stateFile){$saved=Get-Content $stateFile -Raw | ConvertFrom-Json}
+$preferred=if($saved -and $saved.start -eq $start){[long]$saved.handle}else{0}
+$handle=[ThemeWindow]::Find([uint32]$proc.ProcessId,$preferred)
+if(!$handle){throw 'Codex main window was not found.'}
+$hw=[IntPtr]$handle
+if($Mode -eq 'status'){
+ @{handle=$handle;mode=$Mode;layer=[ThemeWindow]::Layer($hw);backdrop=[ThemeWindow]::Backdrop($hw)}|ConvertTo-Json -Compress
+ return
+}
+New-Item -ItemType Directory -Force $stateDir | Out-Null
 if(!$saved -or $saved.handle -ne $handle -or $saved.start -ne $start){
  $saved=@{handle=$handle;start=$start;style=[ThemeWindow]::GetStyle($hw,-20).ToInt64();layer=[ThemeWindow]::Layer($hw);backdrop=[ThemeWindow]::Backdrop($hw)}
  $saved|ConvertTo-Json|Set-Content $stateFile -Encoding utf8

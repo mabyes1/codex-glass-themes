@@ -59,16 +59,27 @@ function backdropMismatch(state){
  call('Runtime.evaluate',{expression:`window.__kenGlassNativeOverwritten?.(${state.actual})`}).catch(()=>{});
  onNative(JSON.stringify(nativeWanted));
 }
+async function checkBackdrop(payload){
+ if(stopping||socket?.readyState!==1)return;
+ if(payload==='stats'){
+  const stats=await backdropWatch?.stats();
+  if(socket?.readyState===1)await call('Runtime.evaluate',{expression:`window.__kenGlassNativeStats=${JSON.stringify(stats??null)}`});
+ }else if(payload==='check'&&nativeWanted?.mode==='background')backdropWatch?.check();
+}
 async function connect(){
  const port=await currentCdpPort();
  const targets=await(await fetch(`http://127.0.0.1:${port}/json/list`,{signal:AbortSignal.timeout(2500)})).json();
  const target=targets.find(t=>t.type==='page'&&t.url==='app://-/index.html');if(!target)throw Error('Waiting for main window');
  socket=new WebSocket(target.webSocketDebuggerUrl);
  await new Promise((r,j)=>{socket.onopen=r;socket.onerror=j});
- socket.onmessage=e=>{const m=JSON.parse(e.data);const p=pending.get(m.id);if(p){clearTimeout(p.timer);pending.delete(m.id);m.error?p.reject(Error(m.error.message)):p.resolve(m.result)}else if(m.method==='Runtime.bindingCalled'&&m.params.name==='__kenGlassNative')onNative(m.params.payload)};
+ socket.onmessage=e=>{const m=JSON.parse(e.data);const p=pending.get(m.id);if(p){clearTimeout(p.timer);pending.delete(m.id);m.error?p.reject(Error(m.error.message)):p.resolve(m.result)}else if(m.method==='Runtime.bindingCalled'){
+  if(m.params.name==='__kenGlassNative')onNative(m.params.payload);
+  else if(m.params.name==='__kenGlassNativeCheck')checkBackdrop(m.params.payload).catch(e=>console.error(e.message));
+ }};
  socket.onclose=()=>{backdropWatch?.off();for(const p of pending.values()){clearTimeout(p.timer);p.reject(Error('CDP disconnected'))}pending.clear()};
  await call('Runtime.enable');await call('Page.enable');
  await call('Runtime.addBinding',{name:'__kenGlassNative'});
+ await call('Runtime.addBinding',{name:'__kenGlassNativeCheck'});
  scriptId=(await call('Page.addScriptToEvaluateOnNewDocument',{source})).identifier;
  const result=await call('Runtime.evaluate',{expression:source});if(result.exceptionDetails)throw Error(JSON.stringify(result.exceptionDetails));
  await nativeQueue;
@@ -89,6 +100,7 @@ try{
   if(scriptId)await call('Page.removeScriptToEvaluateOnNewDocument',{identifier:scriptId}).catch(()=>{});
   await call('Runtime.evaluate',{expression:'window.__kenGlassPanel?.dispose(true)'}).catch(()=>{});
   await call('Runtime.removeBinding',{name:'__kenGlassNative'}).catch(()=>{});
+  await call('Runtime.removeBinding',{name:'__kenGlassNativeCheck'}).catch(()=>{});
   await call('Emulation.setDefaultBackgroundColorOverride',{}).catch(()=>{});
  }
  await native('restore').catch(()=>{});socket?.close();await unlink(pidFile).catch(()=>{});console.log('Original appearance restored');

@@ -177,22 +177,28 @@
   }
   $('file').onchange = async () => { try { await importFile($('file').files[0]); } catch(e) { $('status').textContent = e.message; } finally { $('file').value = ''; } };
   let repairTimer = null, themeRepairs = 0, backdropRepairs = 0;
-  function scheduleBackdropRepair() {
+  function scheduleBackdropCheck() {
     clearTimeout(repairTimer);
-    repairTimer = setTimeout(() => { if (!disposed && prefs.mode !== 'original') native(true); },80);
+    repairTimer = setTimeout(() => {
+      if (!disposed && prefs.mode !== 'original' && prefs.keepForeground) window.__kenGlassNativeCheck?.('check');
+    },80);
   }
   const themeGuard = new MutationObserver(() => {
     if (disposed || prefs.mode === 'original' || root.getAttribute('data-theme') === expectedTheme) return;
-    themeRepairs++; root.setAttribute('data-theme',expectedTheme); scheduleBackdropRepair();
+    themeRepairs++; root.setAttribute('data-theme',expectedTheme); scheduleBackdropCheck();
   });
   themeGuard.observe(root,{attributes:true,attributeFilter:['data-theme']});
   const backdropChanged = event => {
     if (event.data?.type !== 'electron-window-opaque-surface-changed' || prefs.mode === 'original') return;
-    backdropRepairs++; scheduleBackdropRepair();
+    scheduleBackdropCheck();
   };
+  const titleGuard = new MutationObserver(scheduleBackdropCheck);
+  const title = document.head.querySelector('title');
+  if (title) titleGuard.observe(title,{childList:true,characterData:true,subtree:true});
+  const unsubscribeSystemTheme = window.electronBridge?.subscribeToSystemThemeVariant?.(scheduleBackdropCheck);
   const outside = event => { if (!event.composedPath().includes(host)) open(false); };
   const escape = event => { if (event.key === 'Escape') open(false); };
-  const activated = () => { if (prefs.mode !== 'original' && prefs.keepForeground) scheduleBackdropRepair(); };
+  const activated = scheduleBackdropCheck;
   const visible = () => { if (document.visibilityState === 'visible') activated(); };
   window.addEventListener('message',backdropChanged);
   window.addEventListener('focus',activated); document.addEventListener('visibilitychange',visible);
@@ -215,7 +221,7 @@
     importFile,
     open:() => open(true),
     dispose(restore = true) {
-      disposed = true; themeGuard.disconnect(); clearTimeout(repairTimer);
+      disposed = true; themeGuard.disconnect(); titleGuard.disconnect(); unsubscribeSystemTheme?.(); clearTimeout(repairTimer);
       window.removeEventListener('message',backdropChanged);
       window.removeEventListener('focus',activated); document.removeEventListener('visibilitychange',visible);
       document.removeEventListener('pointerdown',outside); document.removeEventListener('keydown',escape);
@@ -223,6 +229,7 @@
       if (restore) { style.remove(); restoreTheme(); delete window.__kenGlassOriginalTheme; }
       delete window.__kenGlassPanel; delete window.__kenGlassNativeResult;
       delete window.__kenGlassNativeOverwritten;
+      delete window.__kenGlassNativeStats;
     }
   };
   apply();
