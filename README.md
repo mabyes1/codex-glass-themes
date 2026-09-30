@@ -27,6 +27,7 @@
 - 前景清晰模式需要 Windows 11 build 22621 或更新版本，以及能合成透明背景的 Codex 原生視窗；目前安裝版已確認可用。背景材質使用 [Windows DWM API](https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwm_systembackdrop_type)。
 - Node.js **22.15 或更新版本**，`node.exe` 可從 PATH 執行。
 - Windows PowerShell 5.1，能執行下載後的本機腳本。
+- Windows 內建 .NET Framework C# 編譯器（`Framework64/v4.0.30319/csc.exe`），供第一次啟動時建立輕量背景材質觀察器與建立桌面執行檔。
 - 桌面執行檔會檢查 Codex 是否啟用本機 CDP；連接埠可以變動。若目前的 Codex 沒有 CDP，它會提示你先自行結束 Codex，不會強制關閉正在使用的視窗。
 
 實際驗證的 Codex 版本包含 **26.924.2738.0** 與 **26.928.1915.0**，主程序名稱為 `ChatGPT.exe`，Microsoft Store 套件為 `OpenAI.Codex`。其他安裝方式和作業系統尚未驗證。
@@ -77,6 +78,7 @@
 | `glass.css` | 三種佈景共用的介面樣式，限定在注入期間生效 |
 | `glass-design.test.mjs` | 配色對比、中性佈景隔離與圖片暗化的直接檢查 |
 | `native-window.ps1` | 調整 Codex 主視窗透明度／背景材質，保存並還原原始樣式 |
+| `NativeBackdropWatch.cs`、`native-watch.mjs` | 輕量讀取實際 DWM 材質；偏離設定時通知助手恢復，不依賴 Codex 的通知 |
 | `blue-glass.css` | 第一版藍紫玻璃備份 |
 | `clear-glass.css` | 舊版無色玻璃備份；新版使用共用樣式 |
 | `silver-glass.css` | 舊版銀白亮面備份 |
@@ -101,3 +103,7 @@ v0.3.0 在現有 Codex 主視窗透過 CDP 檢查三種佈景連續切換、重�
 針對「透明模式顯示黑底，手動切換模糊開關才恢復」的回報，原生背景套用會先等待渲染器的透明畫面提交，再將 Acrylic 經由 none → Acrylic 重新綁定，並等待 DWM 完成中間一步。即使材質數值已是 Acrylic，也執行這個刷新；視窗重新取得焦點或恢復可見時亦會重新套用。啟動器在原生套用完成後才回報已連線。這修正了依靠相同材質數值重設、卻未刷新實際畫面的流程；無法保證已涵蓋所有 Codex／顯示驅動版本的觸發條件。
 
 已確認桌面 EXE 重接完成時原生材質為 Acrylic，並模擬材質被改成 Mica 後觸發視窗焦點訊號，確認自動恢復 Acrylic、沒有整窗 alpha，且保留最新偏好。這是原生狀態恢復的檢查；使用者回報的間歇黑底並未完整重現。
+
+v0.3.1 進一步抓到實際覆蓋：CSS 與偏好未變，DWM 已從 Acrylic 變成 Mica，但 Codex 沒有送出背景變更通知。新增的原生觀察器每 500 ms 讀取材質，只在實際值偏離設定時通知助手重新套用；不會定期重建 CSS 或重套正常的材質。保持前景清晰模式關閉、還原原始外觀、CDP 斷線或停止助手時會停止觀察，觀察器也會隨助手退出。
+
+已測試無任何焦點／背景通知的 Mica 覆蓋，約 1.1 秒恢復 Acrylic。實際切換兩個既有對話時也抓到兩次 Mica 覆蓋並自動恢復，最後返回原先對話；圖片、配色與透明度偏好維持不變。觀察器在 `.runtime/` 編譯一次並持續執行，不會每半秒啟動 PowerShell 程序。

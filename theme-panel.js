@@ -204,6 +204,11 @@
     if (prefs.mode !== 'original') background.style.opacity = String(ok && prefs.keepForeground ? prefs.backgroundOpacity / 100 : 1);
     if (ok) status(); else { nativeSignature = ''; $('status').textContent = message; }
   };
+  window.__kenGlassNativeOverwritten = () => {
+    if (disposed || prefs.mode === 'original') return;
+    backdropRepairs++; nativePending = true;
+    $('status').textContent = '背景材質被覆蓋，正在恢復玻璃效果…';
+  };
   window.__kenGlassPanel = {
     getState:() => ({...prefs, colors:{...prefs.colors}, hasImage:!!imageURL}),
     getDiagnostics:() => ({themeRepairs,backdropRepairs,expectedTheme,nativeFailed,nativePending}),
@@ -217,6 +222,7 @@
       host.remove(); background.remove(); root.removeAttribute('data-ken-glass');
       if (restore) { style.remove(); restoreTheme(); delete window.__kenGlassOriginalTheme; }
       delete window.__kenGlassPanel; delete window.__kenGlassNativeResult;
+      delete window.__kenGlassNativeOverwritten;
     }
   };
   apply();

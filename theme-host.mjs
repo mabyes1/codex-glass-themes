@@ -4,6 +4,7 @@ import {join,dirname} from 'node:path';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {createGlassAppearance} from './glass-design.mjs';
+import {startBackdropWatch} from './native-watch.mjs';
 const exec=promisify(execFile),dir=dirname(fileURLToPath(import.meta.url)),runtime=join(dir,'.runtime');
 await mkdir(runtime,{recursive:true});
 const stopFile=join(runtime,'stop'),pidFile=join(runtime,'host.pid');
@@ -13,6 +14,7 @@ const source=(await readFile(join(dir,'theme-panel.js'),'utf8'))
  .replace('CSS_PLACEHOLDER',()=>JSON.stringify(css))
  .replace('APPEARANCE_PLACEHOLDER',()=>createGlassAppearance.toString());
 let socket=null,seq=0,pending=new Map(),nativeQueue=Promise.resolve(),nativeRevision=0,stopping=false,scriptId=null;
+let backdropWatch=null,nativeWanted=null;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function call(method,params={}){return new Promise((resolve,reject)=>{const id=++seq,timer=setTimeout(()=>{pending.delete(id);reject(Error('CDP timeout: '+method))},10000);pending.set(id,{resolve,reject,timer});socket.send(JSON.stringify({id,method,params}))})}
 async function native(mode,opacity=82,blur=false){const {stdout}=await exec('powershell.exe',['-NoProfile','-NonInteractive','-File',join(dir,'native-window.ps1'),'-Mode',mode,'-Opacity',String(opacity),'-Backdrop',blur?'acrylic':'clear'],{windowsHide:true,timeout:12000});return JSON.parse(stdout.trim())}
@@ -23,6 +25,8 @@ async function currentCdpPort(){
 function onNative(payload){
  let value;try{value=JSON.parse(payload)}catch{return}
  if(!['set','background','restore'].includes(value.mode)||!Number.isFinite(value.opacity))return;
+ nativeWanted=value;
+ backdropWatch?.off();
  const opacity=Math.max(value.mode==='background'?0:55,Math.min(100,Math.round(value.opacity)));
  const revision=++nativeRevision;
  nativeQueue=nativeQueue.catch(()=>{}).then(async()=>{
@@ -31,11 +35,15 @@ function onNative(payload){
    await call('Emulation.setDefaultBackgroundColorOverride',value.mode==='background'?{color:{r:0,g:0,b:0,a:0}}:{});
    // Commit the renderer's alpha surface before DWM binds the backdrop to it.
    if(value.mode==='background')await call('Runtime.evaluate',{expression:'new Promise(resolve=>{const finish=()=>resolve(true);setTimeout(finish,150);requestAnimationFrame(()=>requestAnimationFrame(finish))})',awaitPromise:true});
-   await native(value.mode,opacity,value.blur===true);
-   if(revision===nativeRevision&&socket?.readyState===1)await call('Runtime.evaluate',{expression:'window.__kenGlassNativeResult?.(true,"")'});
+   const state=await native(value.mode,opacity,value.blur===true);
+   if(revision===nativeRevision&&socket?.readyState===1){
+    if(value.mode==='background')backdropWatch?.watch(state.handle,value.blur===true?3:1);
+    await call('Runtime.evaluate',{expression:'window.__kenGlassNativeResult?.(true,"")'});
+   }
   }catch(e){
    console.error(e.message);
    if(revision!==nativeRevision)return;
+   backdropWatch?.off();
    await native('restore').catch(()=>{});
    if(socket?.readyState===1){
     await call('Emulation.setDefaultBackgroundColorOverride',{}).catch(()=>{});
@@ -44,6 +52,13 @@ function onNative(payload){
   }
  });
 }
+function backdropMismatch(state){
+ if(stopping||socket?.readyState!==1||nativeWanted?.mode!=='background')return;
+ if(state.expected!==(nativeWanted.blur===true?3:1))return;
+ console.log(new Date().toISOString(),`Native backdrop overwritten: ${state.actual} -> ${state.expected}`);
+ call('Runtime.evaluate',{expression:`window.__kenGlassNativeOverwritten?.(${state.actual})`}).catch(()=>{});
+ onNative(JSON.stringify(nativeWanted));
+}
 async function connect(){
  const port=await currentCdpPort();
  const targets=await(await fetch(`http://127.0.0.1:${port}/json/list`,{signal:AbortSignal.timeout(2500)})).json();
@@ -51,7 +66,7 @@ async function connect(){
  socket=new WebSocket(target.webSocketDebuggerUrl);
  await new Promise((r,j)=>{socket.onopen=r;socket.onerror=j});
  socket.onmessage=e=>{const m=JSON.parse(e.data);const p=pending.get(m.id);if(p){clearTimeout(p.timer);pending.delete(m.id);m.error?p.reject(Error(m.error.message)):p.resolve(m.result)}else if(m.method==='Runtime.bindingCalled'&&m.params.name==='__kenGlassNative')onNative(m.params.payload)};
- socket.onclose=()=>{for(const p of pending.values()){clearTimeout(p.timer);p.reject(Error('CDP disconnected'))}pending.clear()};
+ socket.onclose=()=>{backdropWatch?.off();for(const p of pending.values()){clearTimeout(p.timer);p.reject(Error('CDP disconnected'))}pending.clear()};
  await call('Runtime.enable');await call('Page.enable');
  await call('Runtime.addBinding',{name:'__kenGlassNative'});
  scriptId=(await call('Page.addScriptToEvaluateOnNewDocument',{source})).identifier;
@@ -61,12 +76,14 @@ async function connect(){
 }
 process.on('SIGINT',()=>stopping=true);process.on('SIGTERM',()=>stopping=true);
 try{
+ backdropWatch=await startBackdropWatch(dir,runtime,exec,backdropMismatch);
  while(!stopping){
   try{await access(stopFile);stopping=true;break}catch{}
   if(!socket||socket.readyState!==1){try{await connect()}catch(e){console.error(new Date().toISOString(),e.message);socket?.close();socket=null}}
   await sleep(2000);
  }
 }finally{
+ await backdropWatch?.stop();
  await nativeQueue.catch(()=>{});
  if(socket?.readyState===1){
   if(scriptId)await call('Page.removeScriptToEvaluateOnNewDocument',{identifier:scriptId}).catch(()=>{});
