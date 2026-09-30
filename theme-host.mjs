@@ -3,12 +3,15 @@ import {fileURLToPath} from 'node:url';
 import {join,dirname} from 'node:path';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
+import {createGlassAppearance} from './glass-design.mjs';
 const exec=promisify(execFile),dir=dirname(fileURLToPath(import.meta.url)),runtime=join(dir,'.runtime');
 await mkdir(runtime,{recursive:true});
 const stopFile=join(runtime,'stop'),pidFile=join(runtime,'host.pid');
 await unlink(stopFile).catch(()=>{});await writeFile(pidFile,String(process.pid));
-const themes={color:await readFile(join(dir,'blue-glass.css'),'utf8'),clear:await readFile(join(dir,'clear-glass.css'),'utf8')};
-const source=(await readFile(join(dir,'theme-panel.js'),'utf8')).replace('THEMES_PLACEHOLDER',JSON.stringify(themes));
+const css=await readFile(join(dir,'glass.css'),'utf8');
+const source=(await readFile(join(dir,'theme-panel.js'),'utf8'))
+ .replace('CSS_PLACEHOLDER',()=>JSON.stringify(css))
+ .replace('APPEARANCE_PLACEHOLDER',()=>createGlassAppearance.toString());
 let socket=null,seq=0,pending=new Map(),nativeQueue=Promise.resolve(),nativeRevision=0,stopping=false,scriptId=null;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function call(method,params={}){return new Promise((resolve,reject)=>{const id=++seq,timer=setTimeout(()=>{pending.delete(id);reject(Error('CDP timeout: '+method))},10000);pending.set(id,{resolve,reject,timer});socket.send(JSON.stringify({id,method,params}))})}
@@ -26,6 +29,8 @@ function onNative(payload){
   if(revision!==nativeRevision||stopping)return;
   try{
    await call('Emulation.setDefaultBackgroundColorOverride',value.mode==='background'?{color:{r:0,g:0,b:0,a:0}}:{});
+   // Commit the renderer's alpha surface before DWM binds the backdrop to it.
+   if(value.mode==='background')await call('Runtime.evaluate',{expression:'new Promise(resolve=>{const finish=()=>resolve(true);setTimeout(finish,150);requestAnimationFrame(()=>requestAnimationFrame(finish))})',awaitPromise:true});
    await native(value.mode,opacity,value.blur===true);
    if(revision===nativeRevision&&socket?.readyState===1)await call('Runtime.evaluate',{expression:'window.__kenGlassNativeResult?.(true,"")'});
   }catch(e){
@@ -51,6 +56,7 @@ async function connect(){
  await call('Runtime.addBinding',{name:'__kenGlassNative'});
  scriptId=(await call('Page.addScriptToEvaluateOnNewDocument',{source})).identifier;
  const result=await call('Runtime.evaluate',{expression:source});if(result.exceptionDetails)throw Error(JSON.stringify(result.exceptionDetails));
+ await nativeQueue;
  console.log(new Date().toISOString(),'Theme switcher connected');
 }
 process.on('SIGINT',()=>stopping=true);process.on('SIGTERM',()=>stopping=true);

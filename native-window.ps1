@@ -16,6 +16,7 @@ public class ThemeWindow {
  [DllImport("user32.dll")]public static extern bool RedrawWindow(IntPtr h,IntPtr rect,IntPtr region,uint flags);
  [DllImport("dwmapi.dll")]public static extern int DwmGetWindowAttribute(IntPtr h,int attribute,out int value,int size);
  [DllImport("dwmapi.dll")]public static extern int DwmSetWindowAttribute(IntPtr h,int attribute,ref int value,int size);
+ [DllImport("dwmapi.dll")]public static extern int DwmFlush();
  public static int Backdrop(IntPtr h){int value;return DwmGetWindowAttribute(h,38,out value,4)==0?value:-1;}
  public static bool SetBackdrop(IntPtr h,int value){return DwmSetWindowAttribute(h,38,ref value,4)==0;}
  public static long Find(uint pid){long best=0,area=0;EnumWindows((h,p)=>{uint id;GetWindowThreadProcessId(h,out id);Rect r;if(id==pid&&IsWindowVisible(h)&&GetWindowRect(h,out r)){long a=(long)(r.R-r.L)*(r.B-r.T);if(a>area){area=a;best=h.ToInt64();}}return true;},IntPtr.Zero);return best;}
@@ -52,6 +53,13 @@ if($Mode -eq 'set'){
  if([ThemeWindow]::GetStyle($hw,-20).ToInt64() -ne [long]$saved.style){[void][ThemeWindow]::SetStyle($hw,-20,[IntPtr][long]$saved.style)}
  if($Mode -eq 'background'){
   $material=if($Backdrop -eq 'acrylic'){3}else{1}
+  # The renderer's alpha surface can be recreated while DWM still reports the
+  # requested material. Re-selecting the same value then leaves a black client
+  # area until the user toggles Acrylic off/on. Force that transition ourselves.
+  if($material -eq 3){
+   if(![ThemeWindow]::SetBackdrop($hw,1)){throw 'Windows could not refresh the background material.'}
+   [void][ThemeWindow]::DwmFlush()
+  }
   if(![ThemeWindow]::SetBackdrop($hw,$material)){throw 'Background transparency requires Windows 11 build 22621 or newer.'}
  }elseif($saved.backdrop -ge 0){[void][ThemeWindow]::SetBackdrop($hw,[int]$saved.backdrop)}
  [void][ThemeWindow]::RedrawWindow($hw,[IntPtr]::Zero,[IntPtr]::Zero,0x185)

@@ -1,0 +1,166 @@
+/* Scoped to the removable renderer injection. No global opacity or blur. */
+html[data-ken-glass] {
+  color-scheme:var(--kg-scheme)!important;
+  background:transparent!important;
+  --color-surface:transparent!important;
+  --color-surface-secondary:var(--kg-soft)!important;
+  --color-surface-tertiary:var(--kg-selected)!important;
+  --color-surface-elevated:var(--kg-menu)!important;
+  --color-surface-elevated-secondary:var(--kg-card)!important;
+  --color-surface-card:var(--kg-card)!important;
+  --color-surface-canvas:var(--kg-card)!important;
+  --color-surface-recovery:var(--kg-card)!important;
+  --app-color-background-surface:transparent!important;
+  --app-color-background-surface-under:transparent!important;
+  --color-token-main-surface-primary:transparent!important;
+  --color-token-side-bar-background:transparent!important;
+  --chat-background-color:transparent!important;
+  --color-border:var(--kg-stroke)!important;
+  --color-border-default:var(--kg-stroke)!important;
+  --color-token-border-default:var(--kg-stroke)!important;
+  --color-token-border-heavy:var(--kg-stroke)!important;
+  --app-color-border:var(--kg-stroke)!important;
+  --color-text:var(--kg-primary)!important;
+  --color-text-primary:var(--kg-primary)!important;
+  --color-text-primary-soft:var(--kg-primary)!important;
+  --color-text-primary-soft-alt:var(--kg-primary)!important;
+  --color-text-primary-outline:var(--kg-primary)!important;
+  --color-text-primary-outline-hover:var(--kg-primary)!important;
+  --color-text-primary-ghost:var(--kg-primary)!important;
+  --color-text-primary-ghost-hover:var(--kg-primary)!important;
+  --color-text-primary-surface:var(--kg-primary)!important;
+  --color-text-secondary:var(--kg-secondary)!important;
+  --color-text-secondary-solid:var(--kg-secondary)!important;
+  --color-text-secondary-outline:var(--kg-secondary)!important;
+  --color-text-secondary-outline-hover:var(--kg-primary)!important;
+  --color-text-secondary-ghost:var(--kg-muted)!important;
+  --color-text-secondary-ghost-hover:var(--kg-primary)!important;
+  --color-text-secondary-soft:var(--kg-secondary)!important;
+  --color-text-secondary-soft-alt:var(--kg-secondary)!important;
+  --color-text-tertiary:var(--kg-muted)!important;
+  --color-text-disabled:var(--kg-muted)!important;
+  --color-text-inverse:var(--kg-inverse)!important;
+  --color-text-primary-solid:var(--kg-inverse)!important;
+  --app-color-text-foreground:var(--kg-primary)!important;
+  --app-color-text-foreground-primary:var(--kg-primary)!important;
+  --app-color-text-foreground-secondary:var(--kg-secondary)!important;
+  --app-color-text-foreground-tertiary:var(--kg-muted)!important;
+  --app-color-foreground-application-menu:var(--kg-secondary)!important;
+  --app-color-icon-primary:var(--kg-primary)!important;
+  --app-color-icon-secondary:var(--kg-secondary)!important;
+  --app-color-icon-tertiary:var(--kg-muted)!important;
+  --color-codex-icon:var(--kg-primary)!important;
+  --color-codex-icon-active:var(--kg-primary)!important;
+  --color-token-text-primary:var(--kg-primary)!important;
+  --color-token-text-secondary:var(--kg-secondary)!important;
+  --color-token-text-tertiary:var(--kg-muted)!important;
+  --color-token-text-link-foreground:var(--kg-link)!important;
+  --link-primary-text-color:var(--kg-link)!important;
+  --color-text-composer-primary:var(--kg-primary)!important;
+  --color-text-user-message:var(--kg-primary)!important;
+  --user-message-text-color:var(--kg-primary)!important;
+  --color-background-user-message:var(--kg-bubble)!important;
+  --user-message-background-color:var(--kg-bubble)!important;
+  --color-background-user-message-compact:var(--kg-bubble)!important;
+  --color-background-other-user-message:var(--kg-soft)!important;
+  --color-background-composer-surface:var(--kg-composer)!important;
+  --color-background-composer-action-bar:transparent!important;
+  --color-background-primary-soft-alpha:var(--kg-hover)!important;
+  --color-background-primary-soft-hover:var(--kg-hover)!important;
+  --color-background-primary-soft-active:var(--kg-selected)!important;
+  --color-background-secondary-soft:var(--kg-hover)!important;
+  --color-background-secondary-soft-hover:var(--kg-hover)!important;
+  --color-background-secondary-soft-alpha:var(--kg-hover)!important;
+  --color-background-secondary-ghost-hover:var(--kg-hover)!important;
+  --color-background-mode-toggle-selected:var(--kg-selected)!important;
+  --color-background-activity-control:var(--kg-menu)!important;
+  --color-background-execution-output:var(--kg-soft)!important;
+  --menu-background-color:var(--kg-menu)!important;
+  --tooltip-background-color:var(--kg-menu)!important;
+  --color-background-tooltip-classic:var(--kg-menu)!important;
+  --color-text-tooltip-classic:var(--kg-primary)!important;
+  --color-codex-application-menu:var(--kg-menu)!important;
+  --app-color-background-application-menu:var(--kg-menu)!important;
+  --codeblock-background-color:var(--kg-card)!important;
+  --app-color-background-editor-opaque:var(--kg-menu)!important;
+  --color-codex-terminal-background:var(--kg-menu)!important;
+  --color-codex-terminal-foreground:var(--kg-primary)!important;
+  --input-soft-background-color:var(--kg-hover)!important;
+  --color-text-success:var(--kg-success)!important;
+  --app-color-text-success:var(--kg-success)!important;
+  --app-color-decoration-added:var(--kg-success)!important;
+  --diffs-addition-color-override:var(--kg-success)!important;
+  --app-color-text-error:var(--kg-danger)!important;
+  --app-color-decoration-deleted:var(--kg-danger)!important;
+  --diffs-deletion-color-override:var(--kg-danger)!important;
+  --app-color-text-warning:var(--kg-warning)!important;
+}
+html[data-ken-glass] body {
+  background:transparent!important;
+  box-shadow:none!important;
+  color:var(--kg-primary)!important;
+  text-shadow:var(--kg-text-shadow);
+  isolation:isolate;
+}
+html[data-ken-glass] body::before,html[data-ken-glass] body::after {display:none!important;}
+html[data-ken-glass] #ken-glass-background {
+  position:fixed;inset:0;z-index:-1;pointer-events:none;
+}
+/* The outer app surface must not add a second tinted full-window layer. */
+html[data-ken-glass] main.bg-surface {background:transparent!important;}
+html[data-ken-glass] [data-app-shell-main-surface],
+html[data-ken-glass] main[class*='_MainContentSurface_'] {
+  background:var(--kg-main)!important;
+  backdrop-filter:none!important;
+  box-shadow:inset 1px 0 0 var(--kg-stroke)!important;
+}
+html[data-ken-glass] aside.app-shell-left-panel {
+  background:var(--kg-sidebar)!important;
+  backdrop-filter:none!important;
+  border-right:1px solid var(--kg-stroke)!important;
+  color:var(--kg-primary)!important;
+}
+html[data-ken-glass] [data-app-navigation-rail] {background:transparent!important;}
+html[data-ken-glass] [data-app-shell-titlebar] {background:transparent!important;}
+/* Remove the stock opaque footer fade, including variants with no via-surface. */
+html[data-ken-glass] [class~='bg-gradient-to-t'][class~='from-surface'] {background:none!important;}
+html[data-ken-glass] [data-summary-panel-variant] {
+  background:var(--kg-card)!important;
+  box-shadow:inset 0 0 0 1px var(--kg-stroke),inset 0 1px 0 var(--kg-gleam),0 8px 24px var(--kg-shadow)!important;
+}
+html[data-ken-glass] [data-summary-panel-variant] .bg-surface-elevated-secondary {background:transparent!important;}
+html[data-ken-glass] [data-composer-surface-variant] {
+  --color-text-primary:var(--kg-primary)!important;
+  --color-text-secondary:var(--kg-secondary)!important;
+  --color-text-tertiary:var(--kg-muted)!important;
+  --color-text-composer-primary:var(--kg-primary)!important;
+  color:var(--kg-primary)!important;
+  background:var(--kg-composer)!important;
+  backdrop-filter:none!important;
+  box-shadow:inset 0 0 0 1px var(--kg-stroke),inset 0 1px 0 var(--kg-gleam),0 8px 28px var(--kg-shadow)!important;
+}
+html[data-ken-glass] [data-composer-surface-variant]:focus-within {
+  box-shadow:inset 0 0 0 1px var(--kg-focus),inset 0 1px 0 var(--kg-gleam),0 8px 28px var(--kg-shadow)!important;
+}
+html[data-ken-glass] [data-composer-body] {
+  background:transparent!important;
+  backdrop-filter:none!important;
+  color:var(--kg-primary)!important;
+}
+html[data-ken-glass] [data-composer-placement='home'] [data-composer-surface-variant] {
+  background:transparent!important;box-shadow:none!important;
+}
+html[data-ken-glass] [data-composer-placement='home'] [data-composer-body] {
+  background:var(--kg-composer)!important;
+  border:1px solid var(--kg-stroke)!important;border-radius:22px!important;
+  box-shadow:inset 0 1px 0 var(--kg-gleam),0 8px 28px var(--kg-shadow)!important;
+}
+html[data-ken-glass] [data-user-message-bubble] {
+  background:var(--kg-bubble)!important;color:var(--kg-primary)!important;
+  box-shadow:inset 0 0 0 1px var(--kg-stroke),inset 0 1px 0 var(--kg-gleam)!important;
+}
+html[data-ken-glass] [role='dialog'],html[data-ken-glass] [role='menu'] {
+  backdrop-filter:none!important;
+  box-shadow:0 16px 48px var(--kg-shadow),inset 0 0 0 1px var(--kg-stroke),inset 0 1px 0 var(--kg-gleam)!important;
+}
+html[data-ken-glass] ::selection {background:var(--kg-selected);}
