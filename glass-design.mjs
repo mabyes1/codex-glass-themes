@@ -10,6 +10,7 @@ export function createGlassAppearance(prefs, imageURL = '') {
   }).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
   const color = prefs.mode === 'color';
   const image = prefs.mode === 'image';
+  const clear = prefs.mode === 'clear';
   const base = color ? rgb(prefs.colors.base) : image ? [19, 21, 24] : [0, 0, 0];
   const left = color ? rgb(prefs.colors.left) : base;
   const right = color ? rgb(prefs.colors.right) : base;
@@ -25,8 +26,8 @@ export function createGlassAppearance(prefs, imageURL = '') {
   const muted = light ? '#525b66' : '#bcc2cc';
   const accent = color ? mix(left, right, .42) : [191, 205, 221];
   const link = light ? '#225fa9' : '#9ecbff';
-  const stroke = light ? 'rgba(28,35,44,.16)' : 'rgba(255,255,255,.19)';
-  const gleam = light ? 'rgba(255,255,255,.86)' : 'rgba(255,255,255,.24)';
+  const stroke = light ? 'rgba(28,35,44,.13)' : 'rgba(255,255,255,.12)';
+  const gleam = light ? 'rgba(255,255,255,.72)' : 'rgba(255,255,255,.18)';
   const background = color
     ? `radial-gradient(ellipse at 0% 10%,${alpha(left, .38)},transparent 58%),radial-gradient(ellipse at 95% 90%,${alpha(right, .34)},transparent 58%),${solid(base)}`
     : image && imageURL
@@ -41,18 +42,19 @@ export function createGlassAppearance(prefs, imageURL = '') {
       '--kg-muted': muted,
       '--kg-inverse': light ? '#fff' : '#182029',
       '--kg-solid': light ? '#182029' : '#f7f8fa',
-      '--kg-main': alpha(glass, light ? .78 : .26),
-      '--kg-sidebar': alpha(glass, light ? .82 : .38),
-      '--kg-soft': alpha(glass, light ? .42 : .36),
-      '--kg-card': alpha(glass, light ? .91 : .78),
+      '--kg-main': alpha(glass, light ? .72 : clear ? .20 : .26),
+      '--kg-sidebar': alpha(glass, light ? .76 : clear ? .24 : .32),
+      '--kg-sidebar-overlay': alpha(glass, light ? .14 : clear ? .05 : .08),
+      '--kg-soft': clear ? 'rgba(255,255,255,.045)' : alpha(glass, light ? .30 : .22),
+      '--kg-card': clear ? 'rgba(255,255,255,.065)' : alpha(glass, light ? .66 : image ? .42 : .34),
       '--kg-menu': solid(light ? mix(glass, [255, 255, 255], .35) : mix(glass, [24, 25, 28], .55)),
-      '--kg-composer': alpha(glass, light ? .94 : .78),
-      '--kg-bubble': alpha(light ? mix(glass, accent, .12) : mix(glass, accent, color ? .12 : .035), light ? .88 : .66),
+      '--kg-composer': clear ? 'rgba(255,255,255,.08)' : alpha(glass, light ? .72 : image ? .50 : .46),
+      '--kg-bubble': clear ? 'rgba(255,255,255,.075)' : alpha(light ? mix(glass, accent, .12) : mix(glass, accent, color ? .12 : .035), light ? .62 : .42),
       '--kg-hover': light ? 'rgba(24,32,41,.07)' : 'rgba(255,255,255,.09)',
       '--kg-selected': light ? 'rgba(24,32,41,.12)' : 'rgba(255,255,255,.15)',
       '--kg-stroke': stroke,
       '--kg-gleam': gleam,
-      '--kg-shadow': light ? 'rgba(25,30,40,.10)' : 'rgba(0,0,0,.18)',
+      '--kg-shadow': light ? 'rgba(25,30,40,.08)' : 'rgba(0,0,0,.10)',
       '--kg-text-shadow': light ? 'none' : '0 1px 2px rgba(0,0,0,.7)',
       '--kg-link': link,
       '--kg-success': light ? '#197143' : '#80e3a9',

@@ -122,6 +122,24 @@ html[data-ken-glass] aside.app-shell-left-panel {
 }
 html[data-ken-glass] [data-app-navigation-rail] {background:transparent!important;}
 html[data-ken-glass] [data-app-shell-titlebar] {background:transparent!important;}
+/* Match the application menu row to the chat surface beneath it. */
+html[data-ken-glass] header.h-toolbar {
+  background:var(--kg-main)!important;
+  border-bottom-color:var(--kg-stroke)!important;
+}
+/* The Windows application-menu layout has its own top-bar DIV and gutter.
+   Paint the whole frame once, so menu, gutter and conversation share one plane. */
+html[data-ken-glass] [data-app-shell-page-surface='true'] {
+  background:var(--kg-main)!important;
+}
+html[data-ken-glass] [data-app-shell-page-surface='true'] [data-app-shell-main-surface],
+html[data-ken-glass] [data-app-shell-page-surface='true'] [class*='_ApplicationMenuTopBar_'],
+html[data-ken-glass] [data-app-shell-page-surface='true'] header.h-toolbar {
+  background:transparent!important;
+}
+html[data-ken-glass] [data-app-shell-page-surface='true'] aside.app-shell-left-panel {
+  background:var(--kg-sidebar-overlay)!important;
+}
 /* Remove the stock opaque footer fade, including variants with no via-surface. */
 html[data-ken-glass] [class~='bg-gradient-to-t'][class~='from-surface'] {background:none!important;}
 html[data-ken-glass] [data-summary-panel-variant] {
@@ -129,6 +147,18 @@ html[data-ken-glass] [data-summary-panel-variant] {
   box-shadow:inset 0 0 0 1px var(--kg-stroke),inset 0 1px 0 var(--kg-gleam),0 8px 24px var(--kg-shadow)!important;
 }
 html[data-ken-glass] [data-summary-panel-variant] .bg-surface-elevated-secondary {background:transparent!important;}
+html[data-ken-glass] [data-summary-panel-variant] header.bg-surface-elevated-secondary::before {
+  background:transparent!important;
+}
+/* Resource cards get one glass plane instead of stacking tinted subheaders. */
+html[data-ken-glass] [class*='--resource-card-row-padding-x:'] {
+  background:var(--kg-card)!important;
+  box-shadow:inset 0 0 0 1px var(--kg-stroke),inset 0 1px 0 var(--kg-gleam)!important;
+}
+html[data-ken-glass] [class*='--resource-card-row-padding-x:'] .bg-surface-elevated-secondary,
+html[data-ken-glass] [class*='--resource-card-row-padding-x:'] [class~='bg-surface-elevated-secondary/50'] {
+  background:transparent!important;
+}
 html[data-ken-glass] [data-composer-surface-variant] {
   --color-text-primary:var(--kg-primary)!important;
   --color-text-secondary:var(--kg-secondary)!important;
