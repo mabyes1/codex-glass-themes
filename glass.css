@@ -142,6 +142,16 @@ html[data-ken-glass] [data-app-shell-page-surface='true'] aside.app-shell-left-p
 }
 /* Remove the stock opaque footer fade, including variants with no via-surface. */
 html[data-ken-glass] [class~='bg-gradient-to-t'][class~='from-surface'] {background:none!important;}
+/* Keep messages above the transparent composer. Codex measures this inset when
+   the composer grows; its absolute footer remains anchored to the outer layout. */
+html[data-ken-glass] .thread-scroll-container:has(> [data-thread-scroll-footer='true']) {
+  height:calc(100% - var(--thread-scroll-padding-bottom,0px))!important;
+  scroll-padding-bottom:0!important;
+}
+html[data-ken-glass] [data-thread-scroll-footer='true'] {
+  z-index:30!important;
+  isolation:isolate;
+}
 html[data-ken-glass] [data-summary-panel-variant] {
   background:var(--kg-card)!important;
   box-shadow:inset 0 0 0 1px var(--kg-stroke),inset 0 1px 0 var(--kg-gleam),0 8px 24px var(--kg-shadow)!important;
