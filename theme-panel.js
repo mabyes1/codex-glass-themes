@@ -176,12 +176,14 @@
     await storeImage(url); imageURL = url; prefs.mode = 'image'; apply(); $('status').textContent = '圖片已儲存在本機。';
   }
   $('file').onchange = async () => { try { await importFile($('file').files[0]); } catch(e) { $('status').textContent = e.message; } finally { $('file').value = ''; } };
-  let repairTimer = null, themeRepairs = 0, backdropRepairs = 0;
+  let checkScheduled = false, themeRepairs = 0, backdropRepairs = 0;
   function scheduleBackdropCheck() {
-    clearTimeout(repairTimer);
-    repairTimer = setTimeout(() => {
+    if (checkScheduled) return;
+    checkScheduled = true;
+    queueMicrotask(() => {
+      checkScheduled = false;
       if (!disposed && prefs.mode !== 'original' && prefs.keepForeground) window.__kenGlassNativeCheck?.('check');
-    },80);
+    });
   }
   const themeGuard = new MutationObserver(() => {
     if (disposed || prefs.mode === 'original' || root.getAttribute('data-theme') === expectedTheme) return;
@@ -210,10 +212,10 @@
     if (prefs.mode !== 'original') background.style.opacity = String(ok && prefs.keepForeground ? prefs.backgroundOpacity / 100 : 1);
     if (ok) status(); else { nativeSignature = ''; $('status').textContent = message; }
   };
-  window.__kenGlassNativeOverwritten = () => {
-    if (disposed || prefs.mode === 'original') return;
-    backdropRepairs++; nativePending = true;
-    $('status').textContent = '背景材質被覆蓋，正在恢復玻璃效果…';
+  window.__kenGlassNativeRepaired = () => {
+    if (disposed) return;
+    backdropRepairs++; nativePending = false;
+    status();
   };
   window.__kenGlassPanel = {
     getState:() => ({...prefs, colors:{...prefs.colors}, hasImage:!!imageURL}),
@@ -221,14 +223,14 @@
     importFile,
     open:() => open(true),
     dispose(restore = true) {
-      disposed = true; themeGuard.disconnect(); titleGuard.disconnect(); unsubscribeSystemTheme?.(); clearTimeout(repairTimer);
+      disposed = true; themeGuard.disconnect(); titleGuard.disconnect(); unsubscribeSystemTheme?.();
       window.removeEventListener('message',backdropChanged);
       window.removeEventListener('focus',activated); document.removeEventListener('visibilitychange',visible);
       document.removeEventListener('pointerdown',outside); document.removeEventListener('keydown',escape);
       host.remove(); background.remove(); root.removeAttribute('data-ken-glass');
       if (restore) { style.remove(); restoreTheme(); delete window.__kenGlassOriginalTheme; }
       delete window.__kenGlassPanel; delete window.__kenGlassNativeResult;
-      delete window.__kenGlassNativeOverwritten;
+      delete window.__kenGlassNativeRepaired;
       delete window.__kenGlassNativeStats;
     }
   };

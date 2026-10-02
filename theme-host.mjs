@@ -52,11 +52,16 @@ function onNative(payload){
   }
  });
 }
-function backdropMismatch(state){
+function backdropRepaired(state){
  if(stopping||socket?.readyState!==1||nativeWanted?.mode!=='background')return;
  if(state.expected!==(nativeWanted.blur===true?3:1))return;
- console.log(new Date().toISOString(),`Native backdrop overwritten: ${state.actual} -> ${state.expected}`);
- call('Runtime.evaluate',{expression:`window.__kenGlassNativeOverwritten?.(${state.actual})`}).catch(()=>{});
+ console.log(new Date().toISOString(),`Native backdrop restored directly: ${state.actual} -> ${state.expected}`);
+ call('Runtime.evaluate',{expression:'window.__kenGlassNativeRepaired?.()'}).catch(()=>{});
+}
+function backdropRepairFailed(state){
+ if(stopping||socket?.readyState!==1||nativeWanted?.mode!=='background')return;
+ if(state.expected!==(nativeWanted.blur===true?3:1))return;
+ console.error('Direct backdrop repair failed; using full initialization.');
  onNative(JSON.stringify(nativeWanted));
 }
 async function checkBackdrop(payload){
@@ -87,7 +92,7 @@ async function connect(){
 }
 process.on('SIGINT',()=>stopping=true);process.on('SIGTERM',()=>stopping=true);
 try{
- backdropWatch=await startBackdropWatch(dir,runtime,exec,backdropMismatch);
+ backdropWatch=await startBackdropWatch(dir,runtime,exec,backdropRepaired,backdropRepairFailed);
  while(!stopping){
   try{await access(stopFile);stopping=true;break}catch{}
   if(!socket||socket.readyState!==1){try{await connect()}catch(e){console.error(new Date().toISOString(),e.message);socket?.close();socket=null}}

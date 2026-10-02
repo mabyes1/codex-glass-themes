@@ -1,4 +1,4 @@
-// Event-driven, read-only DWM check. Only the host changes window materials.
+// Event-driven material repair. Full window/renderer setup stays in the host.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -13,21 +13,17 @@ internal static class NativeBackdropWatch {
     [DllImport("user32.dll")] private static extern IntPtr SetWinEventHook(uint first, uint last, IntPtr module, WinEventProc callback, uint process, uint thread, uint flags);
     [DllImport("user32.dll")] private static extern bool UnhookWinEvent(IntPtr hook);
     [DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(IntPtr window, int attribute, out int value, int size);
+    [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(IntPtr window, int attribute, ref int value, int size);
     private static readonly List<IntPtr> hooks = new List<IntPtr>();
     private static readonly WinEventProc callback = OnWindowEvent;
     private static Control dispatcher;
-    private static System.Windows.Forms.Timer pending;
     private static long handle;
     private static int expected = -1, lastUnexpected = -1;
     private static long checks, notifications;
 
-    private static void Schedule() {
-        if (expected >= 0 && !pending.Enabled) pending.Start();
-    }
-
     private static void OnWindowEvent(IntPtr hook, uint kind, IntPtr window, int obj, int child, uint thread, uint time) {
         // Ignore accessibility events from individual controls and other windows.
-        if (window.ToInt64() == handle && obj == 0 && child == 0) Schedule();
+        if (window.ToInt64() == handle && obj == 0 && child == 0) Check();
     }
 
     private static void Check() {
@@ -38,8 +34,16 @@ internal static class NativeBackdropWatch {
         if (actual == expected) { lastUnexpected = -1; return; }
         if (lastUnexpected == actual) return;
         lastUnexpected = actual;
-        notifications++;
-        Console.WriteLine("MISMATCH " + handle + " " + actual + " " + expected);
+        int wanted = expected;
+        int result = DwmSetWindowAttribute(new IntPtr(handle), 38, ref wanted, 4);
+        int restored;
+        if (result == 0 && DwmGetWindowAttribute(new IntPtr(handle), 38, out restored, 4) == 0 && restored == expected) {
+            lastUnexpected = -1;
+            notifications++;
+            Console.WriteLine("REPAIRED " + handle + " " + actual + " " + expected);
+        } else {
+            Console.WriteLine("REPAIR_FAILED " + handle + " " + actual + " " + expected);
+        }
         Console.Out.Flush();
     }
 
@@ -55,7 +59,7 @@ internal static class NativeBackdropWatch {
         GetWindowThreadProcessId(new IntPtr(handle), out process);
         if (process == 0) return;
         // Foreground, minimize/restore, show/hide, window state and geometry.
-        foreach (uint[] range in new uint[][] {new uint[] {3,3},new uint[] {16,17},new uint[] {0x8002,0x8003},new uint[] {0x800A,0x800B}}) {
+        foreach (uint[] range in new uint[][] {new uint[] {3,3},new uint[] {16,17},new uint[] {0x8002,0x8003},new uint[] {0x800A,0x800C}}) {
             IntPtr hook = SetWinEventHook(range[0], range[1], IntPtr.Zero, callback, process, 0, 0);
             if (hook != IntPtr.Zero) hooks.Add(hook);
             else Console.Error.WriteLine("Could not subscribe to window events: " + range[0]);
@@ -64,8 +68,8 @@ internal static class NativeBackdropWatch {
 
     private static void Command(string line) {
         if (line == "STOP") { Application.ExitThread(); return; }
-        if (line == "OFF") { expected = -1; lastUnexpected = -1; pending.Stop(); return; }
-        if (line == "CHECK") { Schedule(); return; }
+        if (line == "OFF") { expected = -1; lastUnexpected = -1; return; }
+        if (line == "CHECK") { Check(); return; }
         if (line == "STATS") {
             Console.WriteLine("STATS " + checks + " " + notifications);
             Console.Out.Flush();
@@ -87,9 +91,6 @@ internal static class NativeBackdropWatch {
     [STAThread] private static void Main() {
         dispatcher = new Control();
         IntPtr dispatcherHandle = dispatcher.Handle;
-        pending = new System.Windows.Forms.Timer();
-        pending.Interval = 80;
-        pending.Tick += (sender, args) => { pending.Stop(); Check(); };
         GCHandle keepCallback = GCHandle.Alloc(callback);
         Thread input = new Thread(() => {
             string line;
@@ -105,6 +106,6 @@ internal static class NativeBackdropWatch {
         input.IsBackground = true;
         input.Start();
         try { Application.Run(); }
-        finally { expected = -1; pending.Dispose(); Unhook(); keepCallback.Free(); dispatcher.Dispose(); }
+        finally { expected = -1; Unhook(); keepCallback.Free(); dispatcher.Dispose(); }
     }
 }

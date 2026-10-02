@@ -3,7 +3,7 @@ import {access,stat} from 'node:fs/promises';
 import {join} from 'node:path';
 import {createInterface} from 'node:readline';
 
-export async function startBackdropWatch(dir, runtime, exec, onMismatch) {
+export async function startBackdropWatch(dir, runtime, exec, onRepaired, onFailure) {
   const source = join(dir, 'NativeBackdropWatch.cs');
   const executable = join(runtime, 'NativeBackdropWatch.exe');
   const built = await stat(executable).catch(() => null);
@@ -18,8 +18,8 @@ export async function startBackdropWatch(dir, runtime, exec, onMismatch) {
   const lines = createInterface({input:child.stdout});
   let statsRequest = null;
   lines.on('line', line => {
-    const match = /^MISMATCH (\d+) (-?\d+) ([13])$/.exec(line);
-    if (match) onMismatch({handle:Number(match[1]),actual:Number(match[2]),expected:Number(match[3])});
+    const match = /^(REPAIRED|REPAIR_FAILED) (\d+) (-?\d+) ([13])$/.exec(line);
+    if (match) (match[1] === 'REPAIRED' ? onRepaired : onFailure)?.({handle:Number(match[2]),actual:Number(match[3]),expected:Number(match[4])});
     const stats = /^STATS (\d+) (\d+)$/.exec(line);
     if (stats && statsRequest) { statsRequest.resolve({checks:Number(stats[1]),notifications:Number(stats[2])}); statsRequest = null; }
   });
