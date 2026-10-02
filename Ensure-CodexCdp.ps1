@@ -1,9 +1,10 @@
-param([switch]$CheckOnly)
+param([switch]$CheckOnly,[ValidateRange(1,65535)][int]$PreferredPort=9222)
 $ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot 'codex-cdp.ps1')
 
 function Get-ReadyPort {
     try {
-        $result=& (Join-Path $PSScriptRoot 'find-codex-cdp.ps1') 2>$null
+        $result=Get-CodexCdpPort
         if($result){return [int]$result}
     } catch {}
     return $null
@@ -11,25 +12,24 @@ function Get-ReadyPort {
 
 $readyPort=Get-ReadyPort
 if($readyPort){
-    if($CheckOnly){@{needsRestart=$false;port=$readyPort}|ConvertTo-Json -Compress}
+    if($CheckOnly){@{needsRestart=$false;status='ready';port=$readyPort}|ConvertTo-Json -Compress}
     else{Write-Output $readyPort}
     exit 0
 }
 
-$codexProcess=Get-CimInstance Win32_Process -Filter "Name='ChatGPT.exe'" |
-    Where-Object { $_.CommandLine -notmatch '--type=' -and $_.ExecutablePath -match 'OpenAI\.Codex_' } |
-    Sort-Object CreationDate -Descending | Select-Object -First 1
+$codexProcess=Get-CodexProcesses | Where-Object { $_.CommandLine -notmatch '--type=' } | Select-Object -First 1
 
 if($codexProcess -and $codexProcess.CommandLine -match '--remote-debugging-port=\d+'){
     for($attempt=0;$attempt -lt 20;$attempt++){
         Start-Sleep -Milliseconds 500
         $readyPort=Get-ReadyPort
         if($readyPort){
-            if($CheckOnly){@{needsRestart=$false;port=$readyPort}|ConvertTo-Json -Compress}
+            if($CheckOnly){@{needsRestart=$false;status='ready';port=$readyPort}|ConvertTo-Json -Compress}
             else{Write-Output $readyPort}
             exit 0
         }
     }
+    if($CheckOnly){@{needsRestart=$false;status='starting';processId=$codexProcess.ProcessId}|ConvertTo-Json -Compress;exit 0}
     throw 'Codex has a CDP flag but its main window is not ready. Please try the launcher again.'
 }
 
@@ -44,18 +44,17 @@ if($codexProcess){
 if(!(Test-Path -LiteralPath $codexExecutable)){throw 'Codex executable was not found.'}
 
 if($CheckOnly){
-    @{needsRestart=[bool]$codexProcess;processId=$codexProcess.ProcessId;executable=$codexExecutable}|ConvertTo-Json -Compress
+    $status=if($codexProcess){'running_without_cdp'}else{'closed'}
+    @{needsRestart=[bool]$codexProcess;status=$status;preferredPort=$PreferredPort;processId=$codexProcess.ProcessId;executable=$codexExecutable}|ConvertTo-Json -Compress
     exit 0
 }
 
 if($codexProcess){
-    throw 'Codex is running without CDP. Quit Codex yourself, then launch Codex Glass Themes.exe. The launcher will not close your current window.'
+    Write-Output 'CODEX_CDP_REQUIRED: Codex is open without CDP. Save your work, quit Codex completely, then launch Codex Glass Themes.exe to enable CDP and apply the theme.'
+    exit 20
 }
 
-$listener=[System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback,0)
-$listener.Start()
-$cdpPort=([System.Net.IPEndPoint]$listener.LocalEndpoint).Port
-$listener.Stop()
+$cdpPort=Select-CodexCdpPort -PreferredPort $PreferredPort
 
 & (Join-Path $PSScriptRoot 'Start-PackagedCodex.ps1') -AppUserModelId $appUserModelId -Port $cdpPort | Out-Null
 for($attempt=0;$attempt -lt 60;$attempt++){

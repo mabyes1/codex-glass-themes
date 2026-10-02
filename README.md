@@ -4,6 +4,8 @@
 
 這是非官方的本機客製工具。透過本機 CDP 注入 CSS 和切換面板，不修改 Codex 安裝包，也不需要 npm 相依套件。
 
+**v0.3.4 啟動器**：Codex 已開啟且有 CDP 時直接連線注入；也能從 Codex 自己的 TCP listener 找到未出現在啟動參數的 CDP 或 `--remote-debugging-port=0` 分配的連接埠。啟動新 Codex 時優先使用 loopback **9222**，被其他程式占用就自動選空閒埠。已開啟但沒有 CDP 時改為說明下一步的資訊提示，不顯示程式故障訊息，也不強制關閉 Codex。
+
 ## 功能
 
 - **無色透明玻璃**：無彩色漸層，以中性明暗維持背景對比，文字與圖示使用白色。
@@ -43,12 +45,18 @@
    powershell -NoProfile -File .\Ensure-CodexCdp.ps1 -CheckOnly
    ```
 
-   Microsoft Store 版本由桌面執行檔透過 Windows 套件啟動 API 帶入 CDP 參數；不要直接執行受保護的 `WindowsApps` 內的 `ChatGPT.exe`。這段啟動流程仍需在 Codex 完全關閉時實測。CDP 可控制應用程式，請維持在 loopback，不要公開到區域網路或網際網路。
+    Microsoft Store 版本由桌面執行檔透過 Windows 套件啟動 API 帶入 CDP 參數；不要直接執行受保護的 `WindowsApps` 內的 `ChatGPT.exe`。連接埠優先用 9222，若被占用則換埠；已開啟的 Codex 保留目前連接埠。CDP 只使用 loopback。
 
 3. 點選 Codex 右上角 **「◈ 佈景」**，選擇佈景、配色或圖片，再調整共用不透明度。
 4. 想只讓背景透明時，開啟 **「保持前景清晰」**，調整 **「背景不透明度」**。開啟 **「模糊背後背景（Acrylic）」** 可使用毛玻璃；關閉則使用清透玻璃。
 
 不需要 `npm install`。背景助手會在頁面重新載入或 Codex 重開、CDP 連接埠改變後重新連線，補上切換器。若新的 Codex 工作階段沒有啟用 CDP，需要自行結束它，再透過桌面執行檔啟動。AGENTS.md 可以提醒代理在新對話中檢查並接回佈景，但無法替已執行的 Electron 程序新增啟動參數，也不會在代理執行前改變畫面。未設定 Windows 開機自動啟動；同一台電腦請只執行一份助手。
+
+### 預設啟用 CDP
+
+使用桌面的 `Codex Glass Themes.exe` 作為日常啟動入口：它會在開啟 Codex 時自動傳入 `--remote-debugging-port=9222`（占用時改用空閒埠）並注入佈景。目前未找到 Codex 官方設定／`config.toml` 中的 CDP 預設開關；由原版 Codex 圖示或 Windows 開機啟動開啟時，仍不會自動帶入此啟動器的參數。未啟用 CDP 的現有程序不能靠本工具臨時追加 CDP。
+
+要指定其他優先連接埠，可在 Codex 完整結束後執行 `powershell -NoProfile -File .\Ensure-CodexCdp.ps1 -PreferredPort 9333`，再執行佈景啟動器。`Ensure-CodexCdp.ps1 -CheckOnly` 會回傳 `ready`、`starting`、`running_without_cdp` 或 `closed` 狀態；未啟用 CDP 的啟動結果使用退出碼 20，與真正啟動故障分開。
 
 ## 建立桌面執行檔
 
@@ -76,6 +84,8 @@
 | --- | --- |
 | `theme-panel.js` | 注入式切換器、調色盤、圖片選擇與本機儲存 |
 | `theme-host.mjs` | CDP 連線、重新連線與原生透明度橋接 |
+| `codex-cdp.ps1`、`find-codex-cdp.ps1` | 驗證 Codex 所屬 TCP listener 與主頁 target，支援指定／自動連接埠 |
+| `codex-cdp.test.ps1` | CDP 探索、拒絕其他程式的 endpoint 與優先連接埠碰撞檢查 |
 | `glass-design.mjs` | 從偏好直接生成配色、玻璃層與深淺字色 |
 | `glass.css` | 三種佈景共用的介面樣式，限定在注入期間生效 |
 | `glass-design.test.mjs` | 配色對比、中性佈景隔離與圖片暗化的直接檢查 |

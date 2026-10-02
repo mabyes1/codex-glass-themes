@@ -1,6 +1,6 @@
 {
   "name": "codex-glass-themes",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "private": true,
   "description": "Local glass themes, a color palette, image backgrounds and shared window opacity for Codex on Windows.",
   "type": "module",
@@ -8,6 +8,7 @@
   "scripts": {
     "start": "node theme-host.mjs",
     "check": "node --check theme-host.mjs && node --check theme-panel.js && node --check glass-design.mjs && node --check native-watch.mjs",
-    "test": "node --test glass-design.test.mjs"
+    "test": "node --test glass-design.test.mjs",
+    "test:launcher": "powershell -NoProfile -File codex-cdp.test.ps1"
   }
 }
