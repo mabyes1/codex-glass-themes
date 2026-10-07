@@ -9,7 +9,7 @@ Glass backgrounds, color presets, and local image wallpapers for `ChatGPT.exe` i
 ### Install and use
 
 1. Install the official Windows x64 Codex app first.
-2. Run `ChatGPT-Glass-Themes-Setup-1.1.2-win-x64.exe` and click **「安裝並啟用」** (Install and enable).
+2. Run `ChatGPT-Glass-Themes-Setup-1.2.0-win-x64.exe` and click **「安裝並啟用」** (Install and enable).
 3. If Codex is running, finish your work, fully quit it once, and reopen it from the usual Start menu or taskbar icon.
 4. Click **「佈景」** (Theme) near the top of the window to select colors, a background image, or **「水族館」** (Aquarium).
 
@@ -19,7 +19,7 @@ Requires Windows 11 x64, build 22621 or newer, and the official `OpenAI.Codex` p
 
 The default installation folder is `%USERPROFILE%\CodexGlass`. Keep it in place while using the tool. Remove an earlier helper with its original removal function before installing this version. For an older development version with an administrator-level IFEO hook, also run its original restore script before migrating.
 
-The Deep Sea Glimmer aquarium combines a static AI-generated ocean background with generated silver arowana, angelfish, blue chromis, whale shark sprites, and small bubbles, capped at 18 FPS and 960 × 640 pixels. Water opacity is saved separately. Use **「暫停游動」** to pause; animation also stops while the window is hidden, another theme is selected, or reduced motion is enabled.
+The Deep Sea Glimmer aquarium combines a static AI-generated ocean background with ten generated fish species and small bubbles. The fantasy aquarium mixes freshwater and marine animals, keeping fourteen swimming slots and changing species beyond the edge. Animation is capped at 18 FPS and 960 × 640 pixels. Water opacity is saved separately. Use **「暫停游動」** to pause; animation also stops while the window is hidden, another theme is selected, or reduced motion is enabled.
 
 ### Uninstall, updates, and data
 
@@ -48,7 +48,7 @@ Bundled software: unmodified [Node.js 24.21.0 for Windows x64](https://nodejs.or
 ## 安裝
 
 1. 先安裝官方 Windows x64 Codex 桌面版。
-2. 執行 `ChatGPT-Glass-Themes-Setup-1.1.2-win-x64.exe`，按「安裝並啟用」。
+2. 執行 `ChatGPT-Glass-Themes-Setup-1.2.0-win-x64.exe`，按「安裝並啟用」。
 3. 如果 Codex 正在執行，完整退出一次，再使用原本的開始功能表或工作列圖示開啟。
 4. 點視窗上的「佈景」，選擇配色、自己的背景圖片，或「水族館」。
 
@@ -60,7 +60,7 @@ Bundled software: unmodified [Node.js 24.21.0 for Windows x64](https://nodejs.or
 
 若先前使用的是含管理員 IFEO 鉤子的開發版本，移轉前也請執行原版本的還原腳本。
 
-「深海微光」水族館以 AI 生圖作為靜態海底背景，搭配生圖製作的銀龍魚、神仙魚、藍色小魚、鯨鯊與細小泡泡，上限為 18 FPS、960 × 640 像素，水色濃度獨立保存。「暫停游動」可留下靜態畫面；視窗隱藏、切換主題或系統啟用減少動態效果時，也會停止動畫。
+「深海微光」水族館以 AI 生圖作為靜態海底背景，搭配十種生圖魚群與細小泡泡；這個幻想水族館混合淡水與海水魚，固定十四個游動位置，出畫面後才輪換魚種，上限為 18 FPS、960 × 640 像素，水色濃度獨立保存。「暫停游動」可留下靜態畫面；視窗隱藏、切換主題或系統啟用減少動態效果時，也會停止動畫。
 
 ## 解除安裝
 

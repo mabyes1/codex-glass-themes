@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {createAquariumLayer} from '../packaging/payload/theme/aquarium.mjs';
 
-function scene(backdropURL='',fishURL='') {
+function scene(backdropURL='',fishURL='',reefURL='') {
   const events=new Map(), mediaEvents=new Map(), timers=new Map(), children=[], images=[];
   let now=1, id=0, removed=0, observed=0;
-  const context={translate(){},scale(){},rotate(){},clearRect(){},fillRect(){},save(){},restore(){},drawImage(){},fill(){},beginPath(){},arc(){},stroke(){},createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})};
+  const context={translate(){},scale(){},rotate(){},clearRect(){},fillRect(){},save(){},restore(){},drawImage(){},fill(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},clip(){},arc(){},stroke(){},createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})};
   const media={matches:false,addEventListener:(name,fn)=>mediaEvents.set(name,fn),removeEventListener:name=>mediaEvents.delete(name)};
   const document={hidden:false,addEventListener:(name,fn)=>events.set(name,fn),removeEventListener:name=>events.delete(name),
     createElement:()=>({width:0,height:0,dataset:{},style:{},setAttribute(){},getContext:()=>context,toDataURL:()=> 'data:image/png;base64,fixture',remove(){removed++;}})};
@@ -15,7 +15,7 @@ function scene(backdropURL='',fishURL='') {
     Path2D:class {},ResizeObserver:class {observe(){observed++;}disconnect(){observed--; }},
     performance:{now:()=>now},setTimeout:(fn,delay)=>{timers.set(++id,{fn,delay});return id;},clearTimeout:key=>timers.delete(key)});
   const container={append:child=>children.push(child),getBoundingClientRect:()=>({width:7680,height:4320})};
-  const layer=vm.runInContext(`(${createAquariumLayer.toString()})`,scope)(container,backdropURL,fishURL);
+  const layer=vm.runInContext(`(${createAquariumLayer.toString()})`,scope)(container,backdropURL,fishURL,reefURL);
   return {layer,timers,children,document,media,events,mediaEvents,images,
     tick(){const [key,timer]=timers.entries().next().value;timers.delete(key);now+=timer.delay;timer.fn();},
     counters:()=>({removed,observed})};
@@ -54,4 +54,20 @@ test('hidden windows, pause, and reduced motion stop rendering and resume withou
   s.media.matches=true;s.mediaEvents.get('change')();assert.equal(s.timers.size,0);
   s.media.matches=false;s.mediaEvents.get('change')();assert.equal(s.timers.size,1);
   s.layer.dispose();assert.equal(s.timers.size,0);
+});
+
+test('reef expansion has ten cached species but keeps fourteen swimming slots and one timer',()=>{
+  const s=scene('','base-atlas','reef-atlas');s.layer.setActive(true);
+  assert.equal(s.images.length,2);s.images[1].onload();
+  assert.equal(s.layer.getDiagnostics().fishReady,false);
+  s.images[0].onload();const ready=s.layer.getDiagnostics();
+  assert.equal(ready.fishReady,true);assert.equal(ready.speciesCount,10);assert.equal(ready.fishCount,14);
+  assert.ok(ready.spriteMiB<10);
+  for(let i=0;i<5000;i++)s.tick();
+  assert.equal(s.layer.getDiagnostics().spriteMiB,ready.spriteMiB);
+  assert.equal(s.images.length,2);assert.equal(s.timers.size,1);
+  s.layer.dispose();assert.equal(s.timers.size,0);
+  const late=scene('','base-atlas','reef-atlas');late.layer.setActive(true);
+  const callbacks=late.images.map(image=>image.onload);late.layer.dispose();callbacks.forEach(fn=>fn());
+  assert.equal(late.layer.getDiagnostics().speciesCount,0);
 });

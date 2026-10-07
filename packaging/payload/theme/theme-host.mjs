@@ -15,6 +15,7 @@ const css=await readFile(join(dir,'glass.css'),'utf8');
 const panelCss=await readFile(join(dir,'theme-panel.css'),'utf8');
 const aquariumImage='data:image/png;base64,'+(await readFile(join(dir,'assets/deep-sea.png'))).toString('base64');
 const fishAtlas='data:image/png;base64,'+(await readFile(join(dir,'assets/fish-atlas.png'))).toString('base64');
+const reefAtlas='data:image/png;base64,'+(await readFile(join(dir,'assets/fish-atlas-reef.png'))).toString('base64');
 const source=(await readFile(join(dir,'theme-panel.js'),'utf8'))
  .replace('CSS_PLACEHOLDER',()=>JSON.stringify(css))
  .replace('APPEARANCE_PLACEHOLDER',()=>createGlassAppearance.toString())
@@ -22,7 +23,8 @@ const source=(await readFile(join(dir,'theme-panel.js'),'utf8'))
  .replace('PANEL_CSS_PLACEHOLDER',()=>JSON.stringify(panelCss))
  .replace('AQUARIUM_PLACEHOLDER',()=>createAquariumLayer.toString())
  .replace('AQUARIUM_IMAGE_PLACEHOLDER',()=>JSON.stringify(aquariumImage))
- .replace('FISH_ATLAS_PLACEHOLDER',()=>JSON.stringify(fishAtlas));
+ .replace('FISH_ATLAS_PLACEHOLDER',()=>JSON.stringify(fishAtlas))
+ .replace('REEF_ATLAS_PLACEHOLDER',()=>JSON.stringify(reefAtlas));
 let socket=null,seq=0,pending=new Map(),nativeQueue=Promise.resolve(),nativeRevision=0,stopping=false,scriptId=null;
 let backdropWatch=null,nativeWanted=null;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));

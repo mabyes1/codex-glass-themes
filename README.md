@@ -22,11 +22,11 @@ Preferences persist in your existing Codex browser profile. Images are stored lo
 
 Choose **「水族館」** for a mysterious midnight-blue ocean behind the glass: silver arowanas, angelfish, a small school, a distant whale shark, and rising bubbles. **「水色濃度」** controls the water opacity independently of your other themes. **「暫停游動」** freezes the scene.
 
-The scene uses 14 softly lit fish and 20 bubbles, with a maximum of 18 frames per second and a canvas capped at 960 × 640 pixels. A softly blurred, AI-generated environment plate provides distant rocks and underwater light without being redrawn by the animation loop. The fish use an AI-generated transparent atlas: silver arowana, angelfish, blue chromis, and whale shark. Eight swimming poses per species are cached once, preserving natural proportions and fine fins. Each swimming fish takes one small image draw per frame. Animation stops when you switch themes, hide the window, pause it, or enable the system's reduced-motion preference.
+The scene uses 14 softly lit fish and 20 bubbles, with a maximum of 18 frames per second and a canvas capped at 960 × 640 pixels. A softly blurred, AI-generated environment plate provides distant rocks and underwater light without being redrawn by the animation loop. The fish use AI-generated transparent atlases with ten species: silver arowana, angelfish, blue chromis, whale shark, clownfish, blue tang, copperband butterflyfish, betta, lionfish, and manta ray. Fourteen swimming slots are reused; fish change species after passing beyond the edge. This fantasy aquarium mixes freshwater and marine animals. Eight swimming poses per species are cached once, preserving natural proportions and fine fins. Each swimming fish takes one small image draw per frame. Animation stops when you switch themes, hide the window, pause it, or enable the system's reduced-motion preference.
 
 ![Deep-sea environment plate](packaging/payload/theme/assets/deep-sea.png)
 
-The background is softened in the app; moving fish are drawn separately. [Background prompt](docs/art/deep-sea-prompt.md) · [Fish artwork and prompt](docs/art/fish-atlas-prompt.md).
+The background is softened in the app; moving fish are drawn separately. [Background prompt](docs/art/deep-sea-prompt.md) · [Original fish prompt](docs/art/fish-atlas-prompt.md) · [Reef expansion artwork and prompt](docs/art/fish-atlas-reef-prompt.md).
 
 ## Requirements
 
@@ -43,7 +43,7 @@ Installation runs as the current user and does not request administrator elevati
 ## Install and use
 
 1. Install the official Windows x64 Codex app first.
-2. Download `ChatGPT-Glass-Themes-Setup-1.1.2-win-x64.exe` from [Releases](https://github.com/mabyes1/codex-glass-themes/releases/latest).
+2. Download `ChatGPT-Glass-Themes-Setup-1.2.0-win-x64.exe` from [Releases](https://github.com/mabyes1/codex-glass-themes/releases/latest).
 3. Run it using your normal Windows account and click **「安裝並啟用」** (Install and enable). The default folder is `%USERPROFILE%\CodexGlass`.
 4. If Codex was already running, finish your work and **fully quit it once**, then reopen it from its usual icon. Closing a window may leave the app running in the background.
 5. Click **「佈景」** (Theme) near the top of the Codex window. Choose **「清透」** (Clear), **「配色」** (Colors), or **「圖片」** (Image), or **「水族館」** (Aquarium).
@@ -64,7 +64,7 @@ Use that installation's removal function first, then install this release. The i
 
 If you open Codex immediately after an update, it may start before the next synchronization. Wait a few seconds, fully quit, and reopen it if the theme is missing. Future changes to Codex's startup mechanism, Chromium internals, or interface structure may require an update to this tool; compatibility with every future version cannot be guaranteed.
 
-**Theme tool updates:** v1.1.2 uses uninstall-and-reinstall. Remove the installed theme tool through Windows Settings, then run the newer installer. Your theme preferences and image stay in the Codex profile. There is no automatic updater for this tool yet.
+**Theme tool updates:** v1.2.0 uses uninstall-and-reinstall. Remove the installed theme tool through Windows Settings, then run the newer installer. Your theme preferences and image stay in the Codex profile. There is no automatic updater for this tool yet.
 
 ## Uninstall or restore the appearance
 
@@ -94,7 +94,7 @@ Diagnostics are inside the installation folder:
 For a read-only environment check, use PowerShell:
 
 ```powershell
-$setup = '.\ChatGPT-Glass-Themes-Setup-1.1.2-win-x64.exe'
+$setup = '.\ChatGPT-Glass-Themes-Setup-1.2.0-win-x64.exe'
 & $setup --check-only --install-root "$env:USERPROFILE\CodexGlass"
 ```
 

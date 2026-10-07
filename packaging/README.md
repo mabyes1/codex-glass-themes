@@ -10,14 +10,14 @@ Run from the repository root:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File packaging/Get-NodeRuntime.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File packaging/Build-Installer.ps1 -Version 1.1.2
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File packaging/Build-Installer.ps1 -Version 1.2.0
 ```
 
 `Get-NodeRuntime.ps1` downloads the official Node.js 24.21.0 Windows x64 archive over HTTPS, compares the official checksum manifest with the pinned SHA-256, verifies the archive, and extracts it into `packaging/vendor`. Run it once for a fresh checkout; reuse the verified cache for later builds. Changing the runtime requires updating the fetch script, build manifest, and installer test together.
 
 The build compiles the package callback, COM session, native backdrop helper, and WinForms installer. It stages only `packaging/payload` plus the bundled Node executable and license. PowerShell files in the staged payload receive a UTF-8 BOM for Windows PowerShell 5.1. A per-file integrity manifest is embedded with the payload.
 
-Output: `dist/ChatGPT-Glass-Themes-Setup-1.1.2-win-x64.exe`. Each build has a separate staging directory under `packaging/build`. Neither building nor extracting registers a startup callback or changes a running Codex installation.
+Output: `dist/ChatGPT-Glass-Themes-Setup-1.2.0-win-x64.exe`. Each build has a separate staging directory under `packaging/build`. Neither building nor extracting registers a startup callback or changes a running Codex installation.
 
 ## Source layout
 
@@ -65,7 +65,7 @@ It uses a unique empty folder under the current user's profile and removes that 
 | `--silent [--install-root <path>]` | Perform the real installation without the GUI |
 | `--uninstall [--silent] [--install-root <path>]` | Remove the owned installation |
 
-For install/stage/removal, the path must be an ordinary dedicated directory inside the current user's profile. The backend rejects another installation's marker, an unrelated nonempty directory, conflicting callbacks, and an already completed install. Uninstall before reinstalling v1.1.2.
+For install/stage/removal, the path must be an ordinary dedicated directory inside the current user's profile. The backend rejects another installation's marker, an unrelated nonempty directory, conflicting callbacks, and an already completed install. Uninstall before reinstalling v1.2.0.
 
 ## Startup and cleanup boundaries
 
@@ -85,14 +85,14 @@ Windows package debugging changes package lifecycle behavior while active. Revie
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File packaging/Get-NodeRuntime.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File packaging/Build-Installer.ps1 -Version 1.1.2
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File packaging/Build-Installer.ps1 -Version 1.2.0
 ```
 
 第一個腳本以 HTTPS 下載官方 Node.js 24.21.0 Windows x64 ZIP，比對官方校驗清單與固定的 SHA-256，再驗證壓縮檔並解開至 `packaging/vendor`。新 checkout 執行一次即可，之後沿用已驗證的快取。若更換 Node 版本，請同步調整下載腳本、建置資訊與安裝器測試。
 
 建置會編譯啟動回呼、COM session、原生背景助手及 WinForms 安裝器，只收錄 `packaging/payload` 與內附 Node 執行檔、授權。部署用 PowerShell 檔案加入 UTF-8 BOM，確保 Windows PowerShell 5.1 正確讀取中文。安裝內容包含逐檔完整性資訊。
 
-產物是 `dist/ChatGPT-Glass-Themes-Setup-1.1.2-win-x64.exe`，每次建置使用獨立的 `packaging/build` 暫存目錄。建置與單純解包不會啟用回呼，也不會變更正在使用的 Codex。
+產物是 `dist/ChatGPT-Glass-Themes-Setup-1.2.0-win-x64.exe`，每次建置使用獨立的 `packaging/build` 暫存目錄。建置與單純解包不會啟用回呼，也不會變更正在使用的 Codex。
 
 ### 目錄與驗證
 
@@ -116,7 +116,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File packaging/Test-Installer
 
 它使用目前帳戶個人資料夾內的唯一空白目錄，檢查解包、部署、既有安裝保護與移除邊界，成功後移除該測試安裝。過程不啟用套件回呼或寫入登入自啟。紀錄保存在 Git 已排除的 `experiments/` 與 `dist/`；失敗輸出會指出留下的測試目錄。真正安裝與官方入口冷啟動驗收，請使用另一台測試電腦或帳戶。
 
-安裝器各模式見上方表格：`--check-only` 只檢查，`--extract-only` 解包，`--stage-only` 只部署，`--silent` 會實際安裝，`--uninstall` 移除。安裝與部署目錄必須位於目前帳戶的個人資料夾內。v1.1.2 完整安裝後若要重裝，先解除安裝。
+安裝器各模式見上方表格：`--check-only` 只檢查，`--extract-only` 解包，`--stage-only` 只部署，`--silent` 會實際安裝，`--uninstall` 移除。安裝與部署目錄必須位於目前帳戶的個人資料夾內。v1.2.0 完整安裝後若要重裝，先解除安裝。
 
 ### 回復與分發
 

@@ -1,6 +1,8 @@
 // Self-contained: serialized into the renderer alongside the theme panel.
-export function createAquariumLayer(container, backdropURL = '', fishURL = '') {
-  let canvas, context, observer, sprites, plate, atlasImage;
+export function createAquariumLayer(container, backdropURL = '', fishURL = '', reefURL = '') {
+  let canvas, context, observer, sprites, plate;
+  const atlasImages=new Set();
+  let spriteBytes=0,loadedAtlases=0;
   let fishReady=false,fishError=null;
   let active = false, motion = true, disposed = false, timer = null;
   let time = 0, lastTick = 0, frames = 0, drawTime = 0;
@@ -8,13 +10,13 @@ export function createAquariumLayer(container, backdropURL = '', fishURL = '') {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
   // The large, distant silhouette moves slowly; small fish share a loose school.
   const fish = [
-    {kind:'whale', x:.61, y:.48, size:380, speed:.0038, direction:-1, alpha:.40, phase:2},
+    {kind:'whale', pool:['whale','manta'], x:.61, y:.48, size:380, speed:.0038, direction:-1, alpha:.40, phase:2},
     {kind:'arowana', x:.18, y:.25, size:218, speed:.008, direction:1, alpha:.78, phase:0},
-    {kind:'arowana', x:.79, y:.69, size:258, speed:.006, direction:-1, alpha:.66, phase:3},
-    {kind:'angel', x:.18, y:.70, size:72, speed:.005, direction:1, alpha:.62, phase:1},
-    {kind:'angel', x:.26, y:.76, size:55, speed:.006, direction:1, alpha:.48, phase:4},
-    {kind:'angel', x:.84, y:.36, size:67, speed:.005, direction:-1, alpha:.55, phase:2},
-    ...Array.from({length:8}, (_, i) => ({kind:'small', x:.31 + (i % 4) * .052,
+    {kind:'manta', pool:['manta','arowana'], x:.79, y:.69, size:258, speed:.006, direction:-1, alpha:.52, phase:3},
+    {kind:'lion', pool:['lion','angel'], x:.15, y:.72, size:90, speed:.005, direction:1, alpha:.62, phase:1},
+    {kind:'betta', pool:['betta','butterfly'], x:.27, y:.79, size:92, speed:.006, direction:1, alpha:.57, phase:4},
+    {kind:'angel', pool:['angel','betta'], x:.84, y:.36, size:67, speed:.005, direction:-1, alpha:.55, phase:2},
+    ...Array.from({length:8}, (_, i) => ({kind:['small','clown','tang','butterfly'][i%4],pool:['small','clown','tang','butterfly'], x:.31 + (i % 4) * .052,
       y:.38 + Math.floor(i / 4) * .065 + Math.sin(i * 2) * .024,
       size:26 + (i % 3) * 6, speed:.012 + (i % 3) * .0003,
       direction:1, alpha:.48 + (i % 3) * .055, phase:i * 1.7}))
@@ -27,6 +29,9 @@ export function createAquariumLayer(container, backdropURL = '', fishURL = '') {
   // Verified alpha bounds in the generated 1536 × 1024 atlas, with padding.
   const crops={arowana:[20,134,862,278,384],angel:[953,22,476,564,148],
     small:[58,611,620,346,96],whale:[768,621,760,324,384]};
+  const reefCrops={clown:[99,1,515,287,96],tang:[887,5,528,287,104],
+    butterfly:[131,289,513,317,104],betta:[888,296,562,380,156],
+    lion:[68,606,564,411,144],manta:[715,646,794,343,320]};
   function makeSprites() {
     const bubble=document.createElement('canvas');bubble.width=bubble.height=24;
     const ctx=bubble.getContext('2d');ctx.filter='blur(.65px)';
@@ -35,13 +40,18 @@ export function createAquariumLayer(container, backdropURL = '', fishURL = '') {
     ctx.strokeStyle='#b9e4f0a0';ctx.beginPath();ctx.arc(12,12,5.5,3.7,4.8);ctx.stroke();
     return {bubble};
   }
-  function bakeFish(atlas) {
+  function bakeFish(atlas,regions) {
     if(atlas.naturalWidth!==1536 || atlas.naturalHeight!==1024)throw Error('Unexpected fish atlas dimensions');
-    for(const [kind,[sx,sy,sw,sh,width]] of Object.entries(crops)) {
+    for(const [kind,[sx,sy,sw,sh,width]] of Object.entries(regions)) {
       const height=Math.round(width*sh/sw),base=document.createElement('canvas');
       base.width=width+24;base.height=height+24;
       const ctx=base.getContext('2d');
-      ctx.filter=kind==='whale'?'brightness(.68) saturate(.58) blur(1px)':'brightness(.82) saturate(.70) blur(.25px)';
+      ctx.filter=['whale','manta'].includes(kind)?'brightness(.68) saturate(.58) blur(1px)':'brightness(.82) saturate(.70) blur(.25px)';
+      // These two atlas rectangles overlap in empty space; exclude the neighbour's fin.
+      if(kind==='betta'||kind==='manta'){
+        const polygon=kind==='betta'?[[0,0],[1,0],[1,.91],[.60,.91],[.60,1],[0,1]]:[[0,.14],[.62,.14],[.62,0],[1,0],[1,1],[0,1]];
+        ctx.beginPath();polygon.forEach(([x,y],i)=>ctx[i?'lineTo':'moveTo'](12+x*width,12+y*height));ctx.closePath();ctx.clip();
+      }
       ctx.drawImage(atlas,sx,sy,sw,sh,12,12,width,height);
       sprites[kind]=[];
       // Bake gentle tail/body bends once. Each live fish remains one drawImage.
@@ -54,24 +64,25 @@ export function createAquariumLayer(container, backdropURL = '', fishURL = '') {
           out.drawImage(base,x,0,slice,base.height,x,offset,slice,base.height);
         }
         sprites[kind].push(frame);
+        spriteBytes+=frame.width*frame.height*4;
       }
     }
   }
   function loadFish() {
     if(!fishURL){fishError='Fish atlas unavailable';return;}
-    atlasImage=new Image();
-    atlasImage.onload=()=>{
-      if(disposed)return;
-      try{bakeFish(atlasImage);fishReady=true;sync(true);}
-      catch(error){fishError=error.message;}
-      finally{atlasImage.onload=null;atlasImage.onerror=null;atlasImage=null;}
-    };
-    atlasImage.onerror=()=>{
-      if(disposed)return;
-      fishError='Fish atlas could not be decoded';
-      atlasImage.onload=null;atlasImage.onerror=null;atlasImage=null;
-    };
-    atlasImage.src=fishURL;
+    const sources=[[fishURL,crops],...(reefURL?[[reefURL,reefCrops]]:[])];
+    for(const [url,regions] of sources){
+      const atlas=new Image();atlasImages.add(atlas);
+      const release=()=>{atlas.onload=null;atlas.onerror=null;atlasImages.delete(atlas);};
+      atlas.onload=()=>{
+        if(disposed)return;
+        try{bakeFish(atlas,regions);loadedAtlases++;fishReady=loadedAtlases===sources.length;sync(true);}
+        catch(error){fishError=error.message;}
+        finally{release();}
+      };
+      atlas.onerror=()=>{if(disposed)return;fishError='Fish atlas could not be decoded';release();};
+      atlas.src=url;
+    }
   }
   function ensure() {
     if (canvas) return;
@@ -103,17 +114,25 @@ export function createAquariumLayer(container, backdropURL = '', fishURL = '') {
     const unit = Math.min(w / 1000, h / 600);
     context.clearRect(0,0,w,h);
     for (const f of fish) {
-      if(!sprites[f.kind])continue;
-      const cycle = ((f.x + .25 + f.direction * time * f.speed) % 1.5 + 1.5) % 1.5 - .25;
+      const position=f.x+.25+f.direction*time*f.speed,lap=Math.floor(position/1.5);
+      // Change species only beyond the edge; keep the same 14 swimming slots.
+      if(f.lap!==undefined&&f.lap!==lap&&f.pool){
+        const available=f.pool.filter(kind=>sprites[kind]);
+        if(available.length)f.kind=available[(available.indexOf(f.kind)+1)%available.length];
+      }
+      f.lap=lap;
+      const kind=sprites[f.kind]?f.kind:'small';
+      if(!sprites[kind])continue;
+      const cycle = ((position % 1.5 + 1.5) % 1.5) - .25;
       const x = cycle * w, y = (f.y + Math.sin(time * .20 + f.phase) * .012) * h;
-      const texture=sprites[f.kind][0];
+      const texture=sprites[kind][0];
       const width = f.size * unit, height = width * texture.height / texture.width;
       const passingLight=.58+.42*Math.max(0,1-Math.abs(cycle-.36)*1.7);
       context.save(); context.globalAlpha = f.alpha*passingLight;
       context.translate(x,y); context.scale(f.direction, 1);
       context.rotate(Math.cos(time * .20 + f.phase) * .018);
-      const pose=Math.floor(time*(f.kind==='whale'?2.4:6.4)+f.phase*2)%8;
-      context.drawImage(sprites[f.kind][pose],-width / 2,-height / 2,width,height); context.restore();
+      const pose=Math.floor(time*(['whale','manta'].includes(kind)?2.4:6.4)+f.phase*2)%8;
+      context.drawImage(sprites[kind][pose],-width / 2,-height / 2,width,height); context.restore();
     }
     for (const b of bubbles) {
       const progress = (b.phase + time * b.speed) % 1;
@@ -158,11 +177,12 @@ export function createAquariumLayer(container, backdropURL = '', fishURL = '') {
     },
     getDiagnostics:() => ({active,running:timer !== null,motion,reducedMotion:reduced.matches,
       fpsLimit:fps,frames,averageDrawMs:frames ? Number((drawTime/frames).toFixed(3)) : 0,
-      canvasWidth:canvas?.width || 0,canvasHeight:canvas?.height || 0,fishCount:fish.length,bubbleCount:bubbles.length,hasBackdrop:!!plate,fishReady,fishError}),
+      canvasWidth:canvas?.width || 0,canvasHeight:canvas?.height || 0,fishCount:fish.length,bubbleCount:bubbles.length,hasBackdrop:!!plate,fishReady,fishError,
+      speciesCount:Object.keys(sprites||{}).filter(kind=>kind!=='bubble').length,spriteMiB:Number((spriteBytes/1048576).toFixed(2))}),
     dispose() {
       disposed = true; stop(); observer?.disconnect();
       document.removeEventListener('visibilitychange',visibility); reduced.removeEventListener('change',visibility);
-      if(atlasImage){atlasImage.onload=null;atlasImage.onerror=null;atlasImage.src="";atlasImage=null;}
+      for(const atlas of atlasImages){atlas.onload=null;atlas.onerror=null;atlas.src='';}atlasImages.clear();
       canvas?.remove(); plate?.remove(); sprites = null; context = null;
     }
   };

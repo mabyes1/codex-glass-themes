@@ -10,8 +10,8 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("ChatGPT Glass Themes Setup")]
 [assembly: AssemblyDescription("Current-user Codex theme installer")]
-[assembly: AssemblyVersion("1.1.2.0")]
-[assembly: AssemblyFileVersion("1.1.2.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
+[assembly: AssemblyFileVersion("1.2.0.0")]
 internal static class Setup {
     internal static readonly string DefaultRoot=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),"CodexGlass");
     static string Option(string[] args,string key) {
