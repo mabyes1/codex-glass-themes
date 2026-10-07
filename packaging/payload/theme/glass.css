@@ -106,6 +106,7 @@ html[data-ken-glass] body::before,html[data-ken-glass] body::after {display:none
 html[data-ken-glass] #ken-glass-background {
   position:fixed;inset:0;z-index:-1;pointer-events:none;
 }
+html[data-ken-glass='aquarium'] #ken-glass-background {overflow:hidden;}
 /* The outer app surface must not add a second tinted full-window layer. */
 html[data-ken-glass] main.bg-surface {background:transparent!important;}
 html[data-ken-glass] [data-app-shell-main-surface],

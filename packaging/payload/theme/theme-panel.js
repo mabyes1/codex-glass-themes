@@ -1,5 +1,5 @@
 // Runs only in the Codex main renderer. Images stay in local IndexedDB.
-(function installGlass(css, appearanceFor, presets, panelCss, createAquarium) {
+(function installGlass(css, appearanceFor, presets, panelCss, createAquarium, aquariumImage) {
   window.__kenGlassPanel?.dispose(false);
   for (const id of ['ken-desktop-test', 'ken-glass-foreground', 'ken-glass-background', 'ken-glass-switcher']) {
     document.getElementById(id)?.remove();
@@ -32,7 +32,7 @@
   const background = document.createElement('div');
   background.id = 'ken-glass-background'; background.setAttribute('aria-hidden', 'true');
   document.body.prepend(background);
-  const aquarium = createAquarium(background);
+  const aquarium = createAquarium(background, aquariumImage);
   const host = document.createElement('div'); host.id = 'ken-glass-switcher';
   host.style.cssText = 'position:fixed;top:8px;right:160px;z-index:2147483000;-webkit-app-region:no-drag;';
   const shadow = host.attachShadow({mode:'open'});
@@ -63,7 +63,7 @@
         <p class="note">圖片保存在本機。PNG、JPG、WebP、AVIF，最大 12 MB。</p>
       </div>
       <div id="aquarium-control" hidden>
-        <div class="aquarium-title"><span aria-hidden="true">◌</span><div><strong>玻璃後的小小海洋</strong><p class="note">銀龍魚、神仙魚與小魚群，陪你慢慢游。</p></div></div>
+        <div class="aquarium-title"><span aria-hidden="true">◌</span><div><strong>深海微光</strong><p class="note">一束冷光，幾尾銀影，游進安靜的深藍。</p></div></div>
         <label class="range-label" for="aquarium-pause">暫停游動<input id="aquarium-pause" type="checkbox"></label>
         <p class="note">休息時留下靜態魚影。也會配合系統的減少動態效果設定。</p>
       </div>
@@ -148,7 +148,7 @@
     shadow.querySelectorAll('[data-preset]').forEach(b => b.setAttribute('aria-pressed',String(b.dataset.preset === preset?.id)));
     shadow.querySelectorAll('[data-reading]').forEach(b => b.setAttribute('aria-pressed',String(Number(b.dataset.reading) === prefs.surfaceStrength)));
     aquarium.setActive(mode === 'aquarium' && (!prefs.keepForeground || backgroundStrength() > 0),prefs.aquariumMotion);
-    $('active-name').textContent = mode === 'aquarium' ? '毛玻璃水族館 · 把工作放慢一點點' : mode === 'color' ? `${preset?.name || '我的配色'} · ${expectedTheme === 'light' ? '明亮' : '深色'}玻璃` : mode === 'image' ? '圖片玻璃 · 讓喜歡的風景陪你工作' : mode === 'original' ? 'Codex 原始外觀' : '清透玻璃 · 留一點空間給桌面風景';
+    $('active-name').textContent = mode === 'aquarium' ? '深海微光 · 毛玻璃水族館' : mode === 'color' ? `${preset?.name || '我的配色'} · ${expectedTheme === 'light' ? '明亮' : '深色'}玻璃` : mode === 'image' ? '圖片玻璃 · 讓喜歡的風景陪你工作' : mode === 'original' ? 'Codex 原始外觀' : '清透玻璃 · 留一點空間給桌面風景';
     $('toggle-dot').style.background = mode === 'color' || mode === 'aquarium' ? appearanceFor(prefs).background : mode === 'image' && imageURL ? `url(${JSON.stringify(imageURL)}) center/cover` : 'linear-gradient(135deg,#b5bdc9,#687686)';
     $('toggle').title = $('active-name').textContent;
     $('gallery-control').hidden = mode === 'image' || mode === 'aquarium';
@@ -296,4 +296,4 @@
     imageURL = url; $('swatch-image').style.backgroundImage = `url(${JSON.stringify(imageURL)})`;
     if (prefs.mode === 'image') apply(false);
   }).catch(() => { if (!disposed && prefs.mode === 'image') $('status').textContent = '無法讀取已儲存的圖片，請重新選擇。'; });
-})(CSS_PLACEHOLDER, APPEARANCE_PLACEHOLDER, PRESETS_PLACEHOLDER, PANEL_CSS_PLACEHOLDER, AQUARIUM_PLACEHOLDER);
+})(CSS_PLACEHOLDER, APPEARANCE_PLACEHOLDER, PRESETS_PLACEHOLDER, PANEL_CSS_PLACEHOLDER, AQUARIUM_PLACEHOLDER, AQUARIUM_IMAGE_PLACEHOLDER);

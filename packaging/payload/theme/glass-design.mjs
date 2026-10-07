@@ -12,7 +12,7 @@ export function createGlassAppearance(prefs, imageURL = '') {
   const aquarium = prefs.mode === 'aquarium';
   const image = prefs.mode === 'image';
   const clear = prefs.mode === 'clear';
-  const base = aquarium ? [7, 30, 43] : color ? rgb(prefs.colors.base) : image ? [19, 21, 24] : [0, 0, 0];
+  const base = aquarium ? [3, 13, 25] : color ? rgb(prefs.colors.base) : image ? [19, 21, 24] : [0, 0, 0];
   const left = color ? rgb(prefs.colors.left) : base;
   const right = color ? rgb(prefs.colors.right) : base;
   const light = color && luminance(base) > .28;
@@ -33,7 +33,7 @@ export function createGlassAppearance(prefs, imageURL = '') {
   const thickness = (opacity, ceiling) => strength < 50 ? opacity * (.55 + .45 * strength / 50) : opacity + (ceiling - opacity) * (strength - 50) / 50;
   const accentInk = light ? mix(accent, [20, 26, 38], .65) : mix(accent, [255, 255, 255], .65);
   const background = aquarium
-    ? 'radial-gradient(ellipse at 22% -12%,rgba(121,215,201,.30),transparent 57%),radial-gradient(ellipse at 90% 62%,rgba(20,114,139,.20),transparent 62%),linear-gradient(162deg,#174b58 0%,#0c3447 43%,#061b30 100%)'
+    ? 'radial-gradient(ellipse at 36% -16%,rgba(50,123,157,.28),transparent 62%),radial-gradient(ellipse at 79% 48%,rgba(12,56,82,.13),transparent 53%),linear-gradient(174deg,#102e43 0%,#091d32 36%,#050f21 72%,#020813 100%)'
     : color
     ? `radial-gradient(ellipse at 2% 6%,${alpha(left, .48)},transparent 58%),radial-gradient(ellipse at 98% 94%,${alpha(right, .42)},transparent 60%),radial-gradient(ellipse at 60% -30%,${alpha(mix(left,right,.5),.16)},transparent 65%),${solid(base)}`
     : image && imageURL

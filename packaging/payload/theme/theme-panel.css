@@ -38,8 +38,8 @@ h1 {font-size:20px;letter-spacing:.3px;line-height:1.4;margin:5px 0 3px;font-wei
 #swatch-clear {background:linear-gradient(135deg,#ffffff45,#ffffff08),repeating-conic-gradient(#555 0% 25%,#747474 0% 50%) 0 0/8px 8px}
 #swatch-color {background:linear-gradient(135deg,#6aabb3,#a283cc)}
 #swatch-image {background:linear-gradient(155deg,#a6b7bf 45%,#6f8b78 46%,#304541);background-size:cover;background-position:center}
-#swatch-aquarium {background:radial-gradient(ellipse at 65% 40%,#beddd280 0 20%,transparent 30%),linear-gradient(145deg,#367c80,#0b2c45)}
-#aquarium-control {margin-top:16px;padding:15px;border:1px solid var(--panel-line);border-radius:12px;background:linear-gradient(145deg,#79d7c915,#061b3018)}
+#swatch-aquarium {background:radial-gradient(ellipse at 35% 0%,#91c5e080,transparent 65%),linear-gradient(165deg,#17364f,#030b1b)}
+#aquarium-control {margin-top:16px;padding:15px;border:1px solid var(--panel-line);border-radius:12px;background:linear-gradient(145deg,#74b4da12,#030b1b40)}
 .aquarium-title {display:flex;align-items:center;gap:12px}
 .aquarium-title>span {font-size:34px;line-height:1;color:#a2d6d0}
 .aquarium-title strong {font-size:12px;font-weight:600}

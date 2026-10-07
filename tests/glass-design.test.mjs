@@ -60,5 +60,5 @@ test('aquarium stays readable and independent of saved colors or wallpaper',()=>
   const b=createGlassAppearance({...defaults,mode:'aquarium',colors:{base:'#ffffff',left:'#ff0000',right:'#00ff00'}},'private-image');
   assert.deepEqual(a,b);assert.equal(a.theme,'dark');
   for(const name of ['--kg-primary','--kg-secondary','--kg-muted'])assert.ok(contrast(a.variables[name],a.variables['--kg-menu'])>=4.5);
-  assert.ok(a.background.includes('#061b30'));assert.ok(!a.background.includes('private-image'));
+  assert.ok(a.background.includes('#020813'));assert.ok(!a.background.includes('private-image'));
 });
