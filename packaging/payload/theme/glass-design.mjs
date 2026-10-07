@@ -9,9 +9,10 @@ export function createGlassAppearance(prefs, imageURL = '') {
     return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4;
   }).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
   const color = prefs.mode === 'color';
+  const aquarium = prefs.mode === 'aquarium';
   const image = prefs.mode === 'image';
   const clear = prefs.mode === 'clear';
-  const base = color ? rgb(prefs.colors.base) : image ? [19, 21, 24] : [0, 0, 0];
+  const base = aquarium ? [7, 30, 43] : color ? rgb(prefs.colors.base) : image ? [19, 21, 24] : [0, 0, 0];
   const left = color ? rgb(prefs.colors.left) : base;
   const right = color ? rgb(prefs.colors.right) : base;
   const light = color && luminance(base) > .28;
@@ -31,7 +32,9 @@ export function createGlassAppearance(prefs, imageURL = '') {
   const strength = Number.isFinite(prefs.surfaceStrength) ? Math.max(0, Math.min(100, prefs.surfaceStrength)) : 50;
   const thickness = (opacity, ceiling) => strength < 50 ? opacity * (.55 + .45 * strength / 50) : opacity + (ceiling - opacity) * (strength - 50) / 50;
   const accentInk = light ? mix(accent, [20, 26, 38], .65) : mix(accent, [255, 255, 255], .65);
-  const background = color
+  const background = aquarium
+    ? 'radial-gradient(ellipse at 22% -12%,rgba(121,215,201,.30),transparent 57%),radial-gradient(ellipse at 90% 62%,rgba(20,114,139,.20),transparent 62%),linear-gradient(162deg,#174b58 0%,#0c3447 43%,#061b30 100%)'
+    : color
     ? `radial-gradient(ellipse at 2% 6%,${alpha(left, .48)},transparent 58%),radial-gradient(ellipse at 98% 94%,${alpha(right, .42)},transparent 60%),radial-gradient(ellipse at 60% -30%,${alpha(mix(left,right,.5),.16)},transparent 65%),${solid(base)}`
     : image && imageURL
       ? `linear-gradient(rgba(0,0,0,${prefs.imageShade / 100}),rgba(0,0,0,${prefs.imageShade / 100})),url(${JSON.stringify(imageURL)}) center/cover no-repeat`

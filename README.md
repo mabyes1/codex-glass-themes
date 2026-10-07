@@ -10,13 +10,19 @@ This project targets **`ChatGPT.exe` inside the official `OpenAI.Codex` Windows 
 
 ## What you can customize
 
-- Clear glass, color gradients, or a local background image.
+- Clear glass, color gradients, a local background image, or a frosted aquarium.
 - Six color presets, with separate controls for the base color and two accents.
 - Background strength, blur, image shading, and reading comfort.
 - A control that keeps text and buttons opaque while the background is transparent.
 - A built-in button to restore Codex's original appearance.
 
 Preferences persist in your existing Codex browser profile. Images are stored locally in IndexedDB. PNG, JPEG, WebP, and AVIF are supported, up to 12 MB per image. The installer and theme panel currently use Traditional Chinese; the instructions below include the relevant button labels.
+
+## Frosted aquarium
+
+Choose **「水族館」** for a quiet blue-green tank behind the glass: silver arowanas, angelfish, a small school, a distant large silhouette, and rising bubbles. **「水色濃度」** controls the water opacity independently of your other themes. **「暫停游動」** freezes the scene.
+
+The scene uses 14 soft fish silhouettes and 20 bubbles, with a maximum of 18 frames per second and a canvas capped at 960 × 640 pixels. Fish blur is baked into small reusable textures. Animation stops when you switch themes, hide the window, pause it, or enable the system's reduced-motion preference.
 
 ## Requirements
 
@@ -33,10 +39,10 @@ Installation runs as the current user and does not request administrator elevati
 ## Install and use
 
 1. Install the official Windows x64 Codex app first.
-2. Download `ChatGPT-Glass-Themes-Setup-1.0.0-win-x64.exe` from [Releases](https://github.com/mabyes1/codex-glass-themes/releases/latest).
+2. Download `ChatGPT-Glass-Themes-Setup-1.1.0-win-x64.exe` from [Releases](https://github.com/mabyes1/codex-glass-themes/releases/latest).
 3. Run it using your normal Windows account and click **「安裝並啟用」** (Install and enable). The default folder is `%USERPROFILE%\CodexGlass`.
 4. If Codex was already running, finish your work and **fully quit it once**, then reopen it from its usual icon. Closing a window may leave the app running in the background.
-5. Click **「佈景」** (Theme) near the top of the Codex window. Choose **「清透」** (Clear), **「配色」** (Colors), or **「圖片」** (Image).
+5. Click **「佈景」** (Theme) near the top of the Codex window. Choose **「清透」** (Clear), **「配色」** (Colors), or **「圖片」** (Image), or **「水族館」** (Aquarium).
 
 ![Installer window showing the install folder and Install and enable button](docs/images/installer.png)
 
@@ -54,7 +60,7 @@ Use that installation's removal function first, then install this release. The i
 
 If you open Codex immediately after an update, it may start before the next synchronization. Wait a few seconds, fully quit, and reopen it if the theme is missing. Future changes to Codex's startup mechanism, Chromium internals, or interface structure may require an update to this tool; compatibility with every future version cannot be guaranteed.
 
-**Theme tool updates:** v1.0.0 uses uninstall-and-reinstall. Remove the installed theme tool through Windows Settings, then run the newer installer. Your theme preferences and image stay in the Codex profile. There is no automatic updater for this tool yet.
+**Theme tool updates:** v1.1.0 uses uninstall-and-reinstall. Remove the installed theme tool through Windows Settings, then run the newer installer. Your theme preferences and image stay in the Codex profile. There is no automatic updater for this tool yet.
 
 ## Uninstall or restore the appearance
 
@@ -84,7 +90,7 @@ Diagnostics are inside the installation folder:
 For a read-only environment check, use PowerShell:
 
 ```powershell
-$setup = '.\ChatGPT-Glass-Themes-Setup-1.0.0-win-x64.exe'
+$setup = '.\ChatGPT-Glass-Themes-Setup-1.1.0-win-x64.exe'
 & $setup --check-only --install-root "$env:USERPROFILE\CodexGlass"
 ```
 

@@ -42,7 +42,7 @@ test('curated palettes have legible menu text and distinct light and dark varian
 });
 test('reading strength increases surface coverage while preserving the palette and background',()=>{
   const alpha=value=>Number(value.match(/[\d.]+/g).at(-1));
-  for(const mode of ['clear','color','image']){
+  for(const mode of ['clear','color','image','aquarium']){
     const light=createGlassAppearance({...defaults,mode,surfaceStrength:30});
     const balanced=createGlassAppearance({...defaults,mode,surfaceStrength:50});
     const focus=createGlassAppearance({...defaults,mode,surfaceStrength:85});
@@ -53,4 +53,12 @@ test('reading strength increases surface coverage while preserving the palette a
       assert.ok(alpha(balanced.variables[name])<alpha(focus.variables[name]),`${mode} ${name} focus`);
     }
   }
+});
+
+test('aquarium stays readable and independent of saved colors or wallpaper',()=>{
+  const a=createGlassAppearance({...defaults,mode:'aquarium'});
+  const b=createGlassAppearance({...defaults,mode:'aquarium',colors:{base:'#ffffff',left:'#ff0000',right:'#00ff00'}},'private-image');
+  assert.deepEqual(a,b);assert.equal(a.theme,'dark');
+  for(const name of ['--kg-primary','--kg-secondary','--kg-muted'])assert.ok(contrast(a.variables[name],a.variables['--kg-menu'])>=4.5);
+  assert.ok(a.background.includes('#061b30'));assert.ok(!a.background.includes('private-image'));
 });

@@ -30,6 +30,7 @@ h1 {font-size:20px;letter-spacing:.3px;line-height:1.4;margin:5px 0 3px;font-wei
 #close {display:grid;place-items:center;border:1px solid var(--panel-line);background:transparent;border-radius:9px;width:28px;height:28px;font-size:19px;line-height:1}
 .panel-body {overflow-y:auto;overscroll-behavior:contain;min-height:0;padding:0 20px 18px;scrollbar-width:thin;scrollbar-color:var(--panel-line) transparent}
 .choices,.reading-options {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;background:var(--kg-soft,#ffffff06);border:1px solid var(--panel-line);border-radius:12px}
+.choices {grid-template-columns:repeat(4,minmax(0,1fr))}
 .choice,.reading-options button {display:flex;align-items:center;justify-content:center;gap:7px;border:1px solid transparent;border-radius:8px;padding:7px 5px;background:transparent;font-size:12px}
 .choice[aria-pressed=true],.reading-options button[aria-pressed=true] {background:var(--kg-selected,#ffffff20);border-color:var(--panel-line);box-shadow:0 2px 6px #0001}
 .choice:hover,.reading-options button:hover {background:var(--kg-hover,#ffffff14)}
@@ -37,6 +38,12 @@ h1 {font-size:20px;letter-spacing:.3px;line-height:1.4;margin:5px 0 3px;font-wei
 #swatch-clear {background:linear-gradient(135deg,#ffffff45,#ffffff08),repeating-conic-gradient(#555 0% 25%,#747474 0% 50%) 0 0/8px 8px}
 #swatch-color {background:linear-gradient(135deg,#6aabb3,#a283cc)}
 #swatch-image {background:linear-gradient(155deg,#a6b7bf 45%,#6f8b78 46%,#304541);background-size:cover;background-position:center}
+#swatch-aquarium {background:radial-gradient(ellipse at 65% 40%,#beddd280 0 20%,transparent 30%),linear-gradient(145deg,#367c80,#0b2c45)}
+#aquarium-control {margin-top:16px;padding:15px;border:1px solid var(--panel-line);border-radius:12px;background:linear-gradient(145deg,#79d7c915,#061b3018)}
+.aquarium-title {display:flex;align-items:center;gap:12px}
+.aquarium-title>span {font-size:34px;line-height:1;color:#a2d6d0}
+.aquarium-title strong {font-size:12px;font-weight:600}
+.aquarium-title .note {margin-top:3px}
 .section-heading {display:flex;align-items:center;justify-content:space-between;margin:18px 0 10px;gap:10px}
 .section-heading strong {font-size:12px;font-weight:600}
 .section-heading span {font-size:10px;color:var(--panel-quiet)}
