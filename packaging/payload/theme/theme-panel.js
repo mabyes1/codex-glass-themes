@@ -1,5 +1,5 @@
 // Runs only in the Codex main renderer. Images stay in local IndexedDB.
-(function installGlass(css, appearanceFor, presets, panelCss, createAquarium, aquariumImage) {
+(function installGlass(css, appearanceFor, presets, panelCss, createAquarium, aquariumImage, fishAtlas) {
   window.__kenGlassPanel?.dispose(false);
   for (const id of ['ken-desktop-test', 'ken-glass-foreground', 'ken-glass-background', 'ken-glass-switcher']) {
     document.getElementById(id)?.remove();
@@ -32,7 +32,7 @@
   const background = document.createElement('div');
   background.id = 'ken-glass-background'; background.setAttribute('aria-hidden', 'true');
   document.body.prepend(background);
-  const aquarium = createAquarium(background, aquariumImage);
+  const aquarium = createAquarium(background, aquariumImage, fishAtlas);
   const host = document.createElement('div'); host.id = 'ken-glass-switcher';
   host.style.cssText = 'position:fixed;top:8px;right:160px;z-index:2147483000;-webkit-app-region:no-drag;';
   const shadow = host.attachShadow({mode:'open'});
@@ -296,4 +296,4 @@
     imageURL = url; $('swatch-image').style.backgroundImage = `url(${JSON.stringify(imageURL)})`;
     if (prefs.mode === 'image') apply(false);
   }).catch(() => { if (!disposed && prefs.mode === 'image') $('status').textContent = '無法讀取已儲存的圖片，請重新選擇。'; });
-})(CSS_PLACEHOLDER, APPEARANCE_PLACEHOLDER, PRESETS_PLACEHOLDER, PANEL_CSS_PLACEHOLDER, AQUARIUM_PLACEHOLDER, AQUARIUM_IMAGE_PLACEHOLDER);
+})(CSS_PLACEHOLDER, APPEARANCE_PLACEHOLDER, PRESETS_PLACEHOLDER, PANEL_CSS_PLACEHOLDER, AQUARIUM_PLACEHOLDER, AQUARIUM_IMAGE_PLACEHOLDER, FISH_ATLAS_PLACEHOLDER);
