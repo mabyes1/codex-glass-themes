@@ -1,4 +1,4 @@
-. (Join-Path $PSScriptRoot 'New-CodexArgumentAlias.ps1')
+﻿. (Join-Path $PSScriptRoot 'New-CodexArgumentAlias.ps1')
 function Disable-OwnedPackageThemeHook([string]$packageName) {
     if($packageName -notmatch '^OpenAI\.Codex_[0-9.]+_x64__2p2nqsd0c76g0$'){throw 'Unsupported package identity was preserved'}
     $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
@@ -30,12 +30,16 @@ function Initialize-PackageThemeHook {
 function Write-PackageThemeStatus([string]$state,[string]$message) {
     [ordered]@{state=$state;package=$script:activePackage;workerPid=$PID;message=$message;checkedAt=(Get-Date).ToString('o')}|ConvertTo-Json|Set-Content -LiteralPath $script:packageHookStatus -Encoding UTF8
 }
-function Clear-PackageThemeHook {
+function Clear-PackageThemeHook([switch]$AllowRemovedPackage) {
     if($script:packageSession){
         $script:packageSession.Dispose()
         $failure=$script:packageSession.CleanupError
         $script:packageSession=$null
-        if($failure){Write-PackageThemeStatus 'cleanup-error' $failure;throw $failure}
+        if($failure){
+            $removed=$AllowRemovedPackage -and $failure -eq 'DisableDebugging HRESULT -2147023728' -and !(Get-AppxPackage -Name OpenAI.Codex|Where-Object PackageFullName -eq $script:activePackage)
+            if(!$removed){Write-PackageThemeStatus 'cleanup-error' $failure;throw $failure}
+            Write-PackageThemeStatus 'retired' 'The previous package was removed by an update; continue arming its replacement'
+        }
     }
     $script:activePackage=''
     Write-PackageThemeStatus 'stopped' 'Package debug session released'
@@ -49,7 +53,7 @@ function Sync-PackageThemeHook {
     if(!$package){if($script:packageSession){Clear-PackageThemeHook};return}
     try{$imageArgument=New-CodexArgumentAlias -Package $package}catch{if($script:packageSession){Clear-PackageThemeHook};throw}
     if($script:activePackage -eq $package.PackageFullName -and $script:packageSession){return}
-    if($script:packageSession){Clear-PackageThemeHook}
+    if($script:packageSession){Clear-PackageThemeHook -AllowRemovedPackage}
     $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
     # The named watcher mutex is held here. Recover our own persisted callback
     # after an abrupt process exit or Windows shutdown, preserving other tools.
