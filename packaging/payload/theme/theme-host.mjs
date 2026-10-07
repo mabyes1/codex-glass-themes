@@ -4,15 +4,19 @@ import {join,dirname} from 'node:path';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {createGlassAppearance} from './glass-design.mjs';
+import {glassPresets} from './glass-presets.mjs';
 import {startBackdropWatch} from './native-watch.mjs';
 const exec=promisify(execFile),dir=dirname(fileURLToPath(import.meta.url)),runtime=join(dir,'.runtime');
 await mkdir(runtime,{recursive:true});
 const stopFile=join(runtime,'stop'),pidFile=join(runtime,'host.pid');
 await unlink(stopFile).catch(()=>{});await writeFile(pidFile,String(process.pid));
 const css=await readFile(join(dir,'glass.css'),'utf8');
+const panelCss=await readFile(join(dir,'theme-panel.css'),'utf8');
 const source=(await readFile(join(dir,'theme-panel.js'),'utf8'))
  .replace('CSS_PLACEHOLDER',()=>JSON.stringify(css))
- .replace('APPEARANCE_PLACEHOLDER',()=>createGlassAppearance.toString());
+ .replace('APPEARANCE_PLACEHOLDER',()=>createGlassAppearance.toString())
+ .replace('PRESETS_PLACEHOLDER',()=>JSON.stringify(glassPresets))
+ .replace('PANEL_CSS_PLACEHOLDER',()=>JSON.stringify(panelCss));
 let socket=null,seq=0,pending=new Map(),nativeQueue=Promise.resolve(),nativeRevision=0,stopping=false,scriptId=null;
 let backdropWatch=null,nativeWanted=null;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));

@@ -1,5 +1,5 @@
-$ErrorActionPreference='Stop'
-. (Join-Path $PSScriptRoot 'codex-cdp.ps1')
+﻿$ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot '..\packaging\payload\theme\codex-cdp.ps1')
 $script:glassListeners=@()
 $script:glassTargets=@{}
 $script:glassRequests=@()

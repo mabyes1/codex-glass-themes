@@ -5,13 +5,9 @@ import {createInterface} from 'node:readline';
 
 export async function startBackdropWatch(dir, runtime, exec, onRepaired, onFailure) {
   const source = join(dir, 'NativeBackdropWatch.cs');
-  const executable = join(runtime, 'NativeBackdropWatch.exe');
+  const executable = join(dir, 'NativeBackdropWatch.exe');
   const built = await stat(executable).catch(() => null);
-  if (!built || built.mtimeMs < (await stat(source)).mtimeMs) {
-    const compiler = join(process.env.WINDIR, 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe');
-    await access(compiler);
-    await exec(compiler, ['/nologo', '/target:exe', '/reference:System.Windows.Forms.dll', '/out:' + executable, source], {windowsHide:true, timeout:12000});
-  }
+  if (!built) throw Error('Bundled native backdrop helper is missing');
   const child = spawn(executable, [], {windowsHide:true, stdio:['pipe','pipe','pipe']});
   await new Promise((resolve,reject) => { child.once('spawn', resolve); child.once('error', reject); });
   const closed = new Promise(resolve => child.once('close', resolve));

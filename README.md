@@ -1,129 +1,111 @@
 # Codex Glass Themes
 
-替 Windows 上的 Codex 桌面介面加上玻璃佈景、三色調色盤、自訂圖片，以及所有佈景共用的視窗透明度滑桿。
+[English](README.md) · [繁體中文](README.zh-TW.md)
 
-這是非官方的本機客製工具。透過本機 CDP 注入 CSS 和切換面板，不修改 Codex 安裝包，也不需要 npm 相依套件。
+Give Windows Codex a glass background, your own colors, and local image wallpapers. **Install once, then launch Codex from its usual Start menu or taskbar icon.** A background helper applies the theme automatically.
 
-**v0.3.4 啟動器**：Codex 已開啟且有 CDP 時直接連線注入；也能從 Codex 自己的 TCP listener 找到未出現在啟動參數的 CDP 或 `--remote-debugging-port=0` 分配的連接埠。啟動新 Codex 時優先使用 loopback **9222**，被其他程式占用就自動選空閒埠。已開啟但沒有 CDP 時改為說明下一步的資訊提示，不顯示程式故障訊息，也不強制關閉 Codex。
+**[Download the Windows x64 installer](https://github.com/mabyes1/codex-glass-themes/releases/latest)** · [Build from source](packaging/README.md)
 
-**v0.3.5 切換閃動修正**：收到視窗事件時立即檢查材質；被 Codex 改成 Mica 時，由常駐原生助手直接恢復選定材質，不再啟動 PowerShell、重設渲染器底色或經由 none → Acrylic。正常材質只讀取，不重套，也不定期輪詢。完整初始化保留給啟動、變更原生設定和直接修復失敗時使用。
+This project targets **`ChatGPT.exe` inside the official `OpenAI.Codex` Windows package**. The package identity matters: a different app with the same executable name is not supported. This is an independent community project, unaffiliated with OpenAI.
 
-**v0.3.6 捲動閱讀**：聊天的捲動區域為輸入框保留空間，依 Codex 量測的輸入區高度自動調整；透明輸入框位於較高圖層，往上捲動時聊天文字不會透進框內。
+## What you can customize
 
-## 功能
+- Clear glass, color gradients, or a local background image.
+- Six color presets, with separate controls for the base color and two accents.
+- Background strength, blur, image shading, and reading comfort.
+- A control that keeps text and buttons opaque while the background is transparent.
+- A built-in button to restore Codex's original appearance.
 
-- **無色透明玻璃**：無彩色漸層，以中性明暗維持背景對比，文字與圖示使用白色。
-- **多色玻璃**：可自由調整底色、左側光暈、右側光暈，一鍵還原第一版藍紫配色。側欄、卡片、訊息與輸入框由同一組配色生成；依底色亮度使用深色或白色文字。
-- **圖片玻璃**：本機 PNG、JPG、WebP、AVIF，最大 12 MB，另有圖片暗化滑桿。搭配中性深色玻璃與白字，不沿用多色佈景的藍紫卡片。
-- **共用視窗不透明度**：55–100%，換佈景沿用相同數值。
-- **保持前景清晰**：開啟後改為調整背景不透明度（0–100%），文字、圖示與按鈕不使用整窗透明度。各佈景共用此設定。
-- **清透／Acrylic**：前景清晰模式可選擇無模糊的清透背景，或 Windows Acrylic 背景。Acrylic 的模糊程度由 Windows 管理。
-- **新對話輸入框**：與一般聊天輸入框套用相同的玻璃效果，包含自訂調色與圖片模式。
-- **還原原始外觀**：恢復原來的主題與原生透明度；停止助手時也會還原。
+Preferences persist in your existing Codex browser profile. Images are stored locally in IndexedDB. PNG, JPEG, WebP, and AVIF are supported, up to 12 MB per image. The installer and theme panel currently use Traditional Chinese; the instructions below include the relevant button labels.
 
-關閉「保持前景清晰」時使用 Windows 的整個視窗透明度，文字、按鈕和面板會一起透明。開啟後，恢復原生視窗不透明度，透過 CDP 清除渲染器的預設底色，單獨調整佈景背景層的不透明度，搭配 Windows 的背景合成；前景內容保持原來的清晰度。背景不透明度與舊模式的視窗不透明度分別保存，切換模式不會覆蓋原設定。
+## Requirements
 
-背景與介面玻璃是不同圖層：共用滑桿調整桌面上方的顏色／照片背景，卡片、選單及輸入框保留維持字色對比所需的底色。網頁玻璃本身不使用模糊；Acrylic 選項只控制 Windows 背後的材質。圖片暗化可以設為 0%，重開後也會保留。
-
-**v0.3.3**：背景修復改為事件驅動，不再每半秒輪詢材質。對話標題、系統主題、視窗焦點／狀態／位置變動時，合併事件後讀取一次實際 DWM 材質；只有材質不符才恢復。回到前景不再強制重套，CSS 也不會定期重建。這是對 Codex 主程序重設材質的恢復機制，未修改其安裝包；完全沒有通知的外部改動會等到下一個相關事件才檢查。原生視窗選取會排除寵物等工具視窗，並沿用同一程序中已辨識的主視窗；只查狀態不會改寫還原備份。
-
-舊版的桌面玻璃／銀白亮面偏好自動轉為無色透明玻璃，藍紫玻璃偏好轉為多色玻璃；既有配色、透明度與儲存的圖片繼續保留。
-
-## 需求
-
-- Windows 11 與已安裝的 Codex 桌面版。
-- 前景清晰模式需要 Windows 11 build 22621 或更新版本，以及能合成透明背景的 Codex 原生視窗；目前安裝版已確認可用。背景材質使用 [Windows DWM API](https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwm_systembackdrop_type)。
-- Node.js **22.15 或更新版本**，`node.exe` 可從 PATH 執行。
-- Windows PowerShell 5.1，能執行下載後的本機腳本。
-- Windows 內建 .NET Framework C# 編譯器（`Framework64/v4.0.30319/csc.exe`），供第一次啟動時建立輕量背景材質觀察器與建立桌面執行檔。
-- 桌面執行檔會檢查 Codex 是否啟用本機 CDP；連接埠可以變動。若目前的 Codex 沒有 CDP，它會提示你先自行結束 Codex，不會強制關閉正在使用的視窗。
-
-實際驗證的 Codex 版本包含 **26.924.2738.0**、**26.928.1915.0** 與 **26.928.4866.0**，主程序名稱為 `ChatGPT.exe`，Microsoft Store 套件為 `OpenAI.Codex`。其他安裝方式和作業系統尚未驗證。
-
-## 啟動
-
-1. 下載並解壓縮套件，或 clone 這個 repo。
-2. 直接啟動桌面執行檔或 `Start-Theme-Switcher.cmd`。若 Codex 已開啟 CDP，會直接連線。若目前未啟用 CDP，請先送出或保存未完成的輸入內容，**自行結束 Codex**，再雙擊桌面執行檔啟動帶 CDP 的 Codex。可用下列命令只檢查目前是否需要重新啟動：
-
-   ```powershell
-   powershell -NoProfile -File .\Ensure-CodexCdp.ps1 -CheckOnly
-   ```
-
-    Microsoft Store 版本由桌面執行檔透過 Windows 套件啟動 API 帶入 CDP 參數；不要直接執行受保護的 `WindowsApps` 內的 `ChatGPT.exe`。連接埠優先用 9222，若被占用則換埠；已開啟的 Codex 保留目前連接埠。CDP 只使用 loopback。
-
-3. 點選 Codex 右上角 **「◈ 佈景」**，選擇佈景、配色或圖片，再調整共用不透明度。
-4. 想只讓背景透明時，開啟 **「保持前景清晰」**，調整 **「背景不透明度」**。開啟 **「模糊背後背景（Acrylic）」** 可使用毛玻璃；關閉則使用清透玻璃。
-
-不需要 `npm install`。背景助手會在頁面重新載入或 Codex 重開、CDP 連接埠改變後重新連線，補上切換器。若新的 Codex 工作階段沒有啟用 CDP，需要自行結束它，再透過桌面執行檔啟動。AGENTS.md 可以提醒代理在新對話中檢查並接回佈景，但無法替已執行的 Electron 程序新增啟動參數，也不會在代理執行前改變畫面。未設定 Windows 開機自動啟動；同一台電腦請只執行一份助手。
-
-### 預設啟用 CDP
-
-使用桌面的 `Codex Glass Themes.exe` 作為日常啟動入口：它會在開啟 Codex 時自動傳入 `--remote-debugging-port=9222`（占用時改用空閒埠）並注入佈景。目前未找到 Codex 官方設定／`config.toml` 中的 CDP 預設開關；由原版 Codex 圖示或 Windows 開機啟動開啟時，仍不會自動帶入此啟動器的參數。未啟用 CDP 的現有程序不能靠本工具臨時追加 CDP。
-
-要指定其他優先連接埠，可在 Codex 完整結束後執行 `powershell -NoProfile -File .\Ensure-CodexCdp.ps1 -PreferredPort 9333`，再執行佈景啟動器。`Ensure-CodexCdp.ps1 -CheckOnly` 會回傳 `ready`、`starting`、`running_without_cdp` 或 `closed` 狀態；未啟用 CDP 的啟動結果使用退出碼 20，與真正啟動故障分開。
-
-## 建立桌面執行檔
-
-在套件資料夾執行 `powershell -NoProfile -File .\Build-Desktop-Launcher.ps1`，會在桌面建立 **`Codex Glass Themes.exe`**。之後雙擊它即可啟動或接回切換器。執行檔會呼叫此套件資料夾內的 `Theme-Switcher.ps1`；若搬動套件，請重新執行建置命令。已執行中的助手會自行接回重開後的 Codex，通常無須再次點擊。
-
-## 停止與還原
-
-- 面板裡的 **「還原原始外觀」**：還原外觀，保留切換器。
-- 雙擊 **`Stop-Theme-Switcher.cmd`**：停止助手，移除注入的介面，還原原生視窗樣式。
-- 助手若被強制結束，可執行 `powershell -NoProfile -File .\native-window.ps1 -Mode restore` 還原視窗透明度，再重新載入 Codex 介面以移除樣式。請先還原再移除 `.runtime`，因為裡面有原始視窗樣式的備份。
-
-## 本機資料
-
-- 圖片存在 Codex 的本機 IndexedDB：`ken-glass-images`。
-- 配色與偏好存在本機 localStorage：`ken-glass-preferences-v1`。
-- 執行紀錄、PID 與原生視窗樣式備份存在套件內的 `.runtime/`，已排除 Git。
-- 桌面執行檔的退出碼及輸出會寫入 `.runtime/launcher.log`，方便診斷啟動失敗。
-- 不上傳圖片，不啟動額外網路伺服器，只連接本機 CDP。
-
-停止助手不會清除儲存的圖片與偏好，方便下次繼續使用。
-
-## 檔案
-
-| 檔案 | 用途 |
+| Requirement | Supported configuration |
 | --- | --- |
-| `theme-panel.js` | 注入式切換器、調色盤、圖片選擇與本機儲存 |
-| `theme-host.mjs` | CDP 連線、重新連線與原生透明度橋接 |
-| `codex-cdp.ps1`、`find-codex-cdp.ps1` | 驗證 Codex 所屬 TCP listener 與主頁 target，支援指定／自動連接埠 |
-| `codex-cdp.test.ps1` | CDP 探索、拒絕其他程式的 endpoint 與優先連接埠碰撞檢查 |
-| `glass-design.mjs` | 從偏好直接生成配色、玻璃層與深淺字色 |
-| `glass.css` | 三種佈景共用的介面樣式，限定在注入期間生效 |
-| `glass-design.test.mjs` | 配色對比、中性佈景隔離與圖片暗化的直接檢查 |
-| `native-window.ps1` | 調整 Codex 主視窗透明度／背景材質，保存並還原原始樣式 |
-| `NativeBackdropWatch.cs`、`native-watch.mjs` | 訂閱 Windows 視窗事件並接收介面變動通知；按需讀取 DWM 材質，偏離設定時直接恢復，失敗才通知主助手重新初始化 |
-| `blue-glass.css` | 第一版藍紫玻璃備份 |
-| `clear-glass.css` | 舊版無色玻璃備份；新版使用共用樣式 |
-| `silver-glass.css` | 舊版銀白亮面備份 |
-| `Theme-Switcher.ps1` | 隱藏背景啟動／停止助手 |
-| `find-codex-cdp.ps1` | 尋找目前 Codex 主視窗使用的本機 CDP 連接埠 |
-| `Ensure-CodexCdp.ps1` | 檢查 CDP；若 Codex 未執行，帶 CDP 參數啟動 |
-| `Start-PackagedCodex.ps1` | 透過 Windows 套件啟動 API 啟動 Store 版 Codex |
-| `GlassLauncher.cs`、`Build-Desktop-Launcher.ps1` | 產生桌面單一啟動執行檔 |
+| Operating system | Windows 11, build 22621 or newer |
+| Architecture | x64; ARM64 is not supported by this installer |
+| App | Official Windows Codex, package `OpenAI.Codex` |
+| Account | Install while signed in to the Windows account that uses Codex |
+| Runtime | Bundled Node.js; no separate Node.js or npm installation is needed |
 
-## 驗證範圍
+Installation runs as the current user and does not request administrator elevation. Windows policies that block PowerShell, package debugging, or scheduled tasks may prevent installation. The installer checks the environment and reports conflicts before enabling the helper.
 
-v0.3.0 在現有 Codex 主視窗透過 CDP 檢查三種佈景連續切換、重返同一佈景時樣式一致、共用背景透明度、前景容器 opacity 為 1、無重複注入，以及原始底部遮罩移除。已查看三種佈景的實際渲染；CDP 截圖不包含 Windows 在視窗背後合成的桌面材質。
+## Install and use
 
-`npm run check` 檢查 JavaScript 語法；`npm test` 檢查亮／暗／飽和底色下的選單文字對比、多色調色盤不污染中性佈景，以及 0% 圖片暗化。對比測試針對不透明選單底色；全透明視窗背後的桌面內容無法由此測試保證。
+1. Install the official Windows x64 Codex app first.
+2. Download `ChatGPT-Glass-Themes-Setup-1.0.0-win-x64.exe` from [Releases](https://github.com/mabyes1/codex-glass-themes/releases/latest).
+3. Run it using your normal Windows account and click **「安裝並啟用」** (Install and enable). The default folder is `%USERPROFILE%\CodexGlass`.
+4. If Codex was already running, finish your work and **fully quit it once**, then reopen it from its usual icon. Closing a window may leave the app running in the background.
+5. Click **「佈景」** (Theme) near the top of the Codex window. Choose **「清透」** (Clear), **「配色」** (Colors), or **「圖片」** (Image).
 
-先前版本已在此單機確認圖片顯示與 IndexedDB 儲存、新對話輸入框、助手停止後原生視窗還原、偏好保留，以及桌面 EXE 接上變動後的 CDP 連接埠。此次不會結束 Codex 重跑完整退出後的啟動流程。
+![Installer window showing the install folder and Install and enable button](docs/images/installer.png)
 
-介面選擇器依賴 Codex 的 DOM 結構，更新後可能需要調整。多個 Codex 主視窗目前不支援精確配對；請以單一主視窗使用。
+After installation, the helper starts automatically when this Windows account signs in. It watches for Codex and applies your saved appearance. **You can keep using the official Codex icon; a separate theme launcher is no longer part of the normal workflow.** Keep the installation folder in place while using the tool.
 
-切換視窗／對話時，Codex 可能重新套用自己的深淺主題與原生背景材質。助手只監聽主題與背景材質的變更訊號並恢復所選佈景，不逐次監聽聊天內容重建 CSS。配色直接由偏好生成，不讀取過渡中的畫面底色；CSS 配色或背景透明度的調整也不會每次重設原生視窗。跨越深淺配色、變更原生透明模式時才重新套用完整原生設定；一般背景材質覆蓋由常駐助手直接恢復。過期的原生請求會略過，避免舊設定晚到。
+The installer is currently unsigned, so Windows may display an unknown-publisher warning.
 
-針對「透明模式顯示黑底，手動切換模糊開關才恢復」的回報，完整初始化會先等待渲染器的透明畫面提交，再將 Acrylic 經由 none → Acrylic 重新綁定，並等待 DWM 完成中間一步。即使材質數值已是 Acrylic，也執行這個刷新；一般切換對話、視窗重新取得焦點或恢復可見只檢查材質，偏離設定時直接恢復。啟動器在原生套用完成後才回報已連線。這修正了依靠相同材質數值重設、卻未刷新實際畫面的流程；無法保證已涵蓋所有 Codex／顯示驅動版本的觸發條件。
+### Already using an earlier helper?
 
-已確認桌面 EXE 重接完成時原生材質為 Acrylic，並模擬材質被改成 Mica 後觸發視窗焦點訊號，確認自動恢復 Acrylic、沒有整窗 alpha，且保留最新偏好。這是原生狀態恢復的檢查；使用者回報的間歇黑底並未完整重現。
+Use that installation's removal function first, then install this release. The installer preserves another helper's startup or debugger settings and reports a conflict instead of replacing them. A development checkout that used the older administrator-level IFEO hook should also use its original restore script before migrating.
 
-v0.3.1 進一步抓到實際覆蓋：CSS 與偏好未變，DWM 已從 Acrylic 變成 Mica，但 Codex 沒有送出背景變更通知。新增的原生觀察器每 500 ms 讀取材質，只在實際值偏離設定時通知助手重新套用；不會定期重建 CSS 或重套正常的材質。保持前景清晰模式關閉、還原原始外觀、CDP 斷線或停止助手時會停止觀察，觀察器也會隨助手退出。
+## Updates and compatibility
 
-已測試無任何焦點／背景通知的 Mica 覆蓋，約 1.1 秒恢復 Acrylic。實際切換兩個既有對話時也抓到兩次 Mica 覆蓋並自動恢復，最後返回原先對話；圖片、配色與透明度偏好維持不變。觀察器在 `.runtime/` 編譯一次並持續執行，不會每半秒啟動 PowerShell 程序。
+**Official Codex updates:** the helper queries Windows for the installed package and its actual location every five seconds. When the package changes, it releases the previous callback and registers one for the new package. Package versions and installation drives are discovered at runtime. Old version aliases are kept separate, including aliases whose update target has disappeared.
 
-v0.3.2 調薄卡片與輸入框的填色，無色玻璃改用微量白色亮面，避免深色卡片像黑盒子。摘要卡片標題的額外深色底已移除；Windows 選單列、上方空隙與聊天區由同一層外框底色承接，側欄只補上少量明暗差，不重複疊底。
+If you open Codex immediately after an update, it may start before the next synchronization. Wait a few seconds, fully quit, and reopen it if the theme is missing. Future changes to Codex's startup mechanism, Chromium internals, or interface structure may require an update to this tool; compatibility with every future version cannot be guaranteed.
 
-v0.3.5 在現有 Codex 主視窗切換兩個既有對話後返回原頁，以約 2 ms 間隔觀察 5.5 秒的 DWM 材質。修正前抓到 Mica 停留 1.5–2.7 秒，且恢復時多一次 none 過渡；修正後這次觀察只捕捉到 Acrylic，CSS 節點／內容與圖片、配色及透明度偏好皆未改變。閒置 5 秒為零材質檢查、零恢復；已查看實際桌面合成畫面。此有限取樣未捕捉到 Mica，不代表保證所有操作下皆無短於取樣間隔的過渡，也未阻止 Codex 主程序本身寫入材質。
+**Theme tool updates:** v1.0.0 uses uninstall-and-reinstall. Remove the installed theme tool through Windows Settings, then run the newer installer. Your theme preferences and image stay in the Codex profile. There is no automatic updater for this tool yet.
+
+## Uninstall or restore the appearance
+
+To temporarily use the original interface, open the theme panel and click **「還原 Codex 原始外觀」** (Restore original appearance). The background helper remains installed.
+
+To remove the tool, open **Settings → Apps → Installed apps → ChatGPT Glass Themes（Codex） → Uninstall**. This stops the owned helpers, removes the package callback and login startup entry, and removes the installation files. Theme preferences and the saved image remain in Codex's browser storage.
+
+Uninstall before moving or manually deleting the installation folder so Windows can release the startup callback correctly.
+
+## Troubleshooting
+
+| Symptom | What to do |
+| --- | --- |
+| Installed successfully, but no Theme button | Fully quit Codex once and reopen it. The callback applies to a fresh app process. |
+| Another helper or debugger is detected | Remove it using its original uninstaller or restore script, then retry. |
+| Installation path is too long | Use a shorter, empty folder inside your own Windows profile, such as `%USERPROFILE%\CG`. |
+| Theme disappears after an official update | Wait a few seconds, fully quit, and reopen. If it persists, check the logs below. |
+| Helper files were moved or deleted | Restore them to the installed path, then use the uninstaller. Avoid deleting package debugger registry entries by guesswork. |
+
+Diagnostics are inside the installation folder:
+
+- `.runtime-auto/auto.log`: helper activity and errors.
+- `.runtime-auto/package-hook-status.json`: callback state and package version. `armed` means it is ready for the next fresh launch.
+- `.runtime-auto/live-acceptance.json`: the last observed app process with a working renderer, the original profile, and the theme mounted. Its timestamp matters; it is not a continuous health guarantee.
+- `.runtime-auto/host-error.log`: theme-host errors.
+
+For a read-only environment check, use PowerShell:
+
+```powershell
+$setup = '.\ChatGPT-Glass-Themes-Setup-1.0.0-win-x64.exe'
+& $setup --check-only --install-root "$env:USERPROFILE\CodexGlass"
+```
+
+When [reporting an issue](https://github.com/mabyes1/codex-glass-themes/issues), include your Windows build, Codex version, theme-tool version, and the relevant error. Review logs before sharing them: they can contain local paths, process details, and package information.
+
+## How it works and what it changes
+
+The installer registers a **per-user background helper**, not a Windows service. A temporary, limited scheduled task starts it independently during installation and is then removed. Subsequent sign-ins use the current user's `CodexGlassThemeAutoAttach` startup entry.
+
+The helper uses Windows `IPackageDebugSettings` to receive a callback when the official package starts. A compiled helper validates the package, user, executable, process creation time, and initial thread, adds `--remote-debugging-port=0` within the existing startup argument buffer, and resumes the process. A short directory junction points to the official package to fit that buffer. The theme host discovers the local CDP listener and styles the main renderer.
+
+The official executable and package files remain unchanged. The app continues using its original Codex browser profile; the installer does not bundle the author's accounts, chats, preferences, images, or registry backups. CDP is a powerful debugging interface: the intended listener is local loopback, and the tool does not publish it to the network.
+
+Windows package debugging also changes package suspend/resume/termination behavior while enabled. This is not an official theme extension API. See [Microsoft's package debugging documentation](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-ipackagedebugsettings-enabledebugging) and the [source/build guide](packaging/README.md) for the implementation and recovery boundaries.
+
+## Verification status
+
+The original implementation passed a real cold launch on the development machine: the official app entry opened a working renderer, CDP and the theme attached automatically, and the existing colors and image were restored from the original profile.
+
+The distributable installer passed extraction and isolated file deployment, bundled runtime and native helper checks, existing-installation protection, recovery from an update's dangling junction, and removal without following the junction into the official package. **A full install/launch/uninstall on a second clean Windows computer is still pending.** These checks do not establish compatibility with all PCs or future Codex releases.
+
+## Source and bundled software
+
+The installer, callback helpers, theme assets, and focused tests are in this repository. See **[Building and testing](packaging/README.md)** for the source layout and commands. The installer includes unmodified [Node.js 24.21.0 for Windows x64](https://nodejs.org/dist/v24.21.0/); its license and third-party notices are installed as `runtime/NODE-LICENSE.txt`.

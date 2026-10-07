@@ -1,5 +1,5 @@
 // Runs only in the Codex main renderer. Images stay in local IndexedDB.
-(function installGlass(css, appearanceFor) {
+(function installGlass(css, appearanceFor, presets, panelCss) {
   window.__kenGlassPanel?.dispose(false);
   for (const id of ['ken-desktop-test', 'ken-glass-foreground', 'ken-glass-background', 'ken-glass-switcher']) {
     document.getElementById(id)?.remove();
@@ -10,13 +10,14 @@
   const firstColors = {base:'#111d30', left:'#3b91b3', right:'#7e55a7'};
   let saved;
   try { saved = JSON.parse(localStorage.getItem(key) || '{}'); } catch { saved = {}; }
-  const prefs = {mode:'clear', opacity:82, keepForeground:true, backgroundOpacity:45, backgroundBlur:false, imageShade:28, ...saved};
+  const prefs = {mode:'clear', opacity:82, keepForeground:true, backgroundOpacity:45, backgroundBlur:false, imageShade:28, surfaceStrength:50, ...saved};
   prefs.mode = {desktop:'clear', silver:'clear', blue:'color'}[prefs.mode] || prefs.mode;
   if (!['clear', 'color', 'image', 'original'].includes(prefs.mode)) prefs.mode = 'clear';
   const number = (value, min, max, fallback) => Number.isFinite(Number(value)) ? Math.max(min, Math.min(max, Number(value))) : fallback;
   prefs.opacity = number(prefs.opacity, 55, 100, 82);
   prefs.backgroundOpacity = number(prefs.backgroundOpacity, 0, 100, 45);
   prefs.imageShade = number(prefs.imageShade, 0, 65, 28);
+  prefs.surfaceStrength = number(prefs.surfaceStrength, 0, 100, 50);
   prefs.keepForeground = prefs.keepForeground === true;
   prefs.backgroundBlur = prefs.backgroundBlur === true;
   prefs.colors = {...firstColors, ...saved?.colors};
@@ -32,53 +33,66 @@
   const host = document.createElement('div'); host.id = 'ken-glass-switcher';
   host.style.cssText = 'position:fixed;top:8px;right:160px;z-index:2147483000;-webkit-app-region:no-drag;';
   const shadow = host.attachShadow({mode:'open'});
-  shadow.innerHTML = `<style>
-    :host{font:13px/1.5 "Segoe UI","Microsoft JhengHei",sans-serif;color:var(--kg-primary,#f7f8fa);color-scheme:var(--kg-scheme,dark);text-shadow:none}
-    *{box-sizing:border-box}button,input{font:inherit}button{cursor:pointer;color:inherit}[hidden]{display:none!important}
-    #toggle{padding:4px 12px;border:1px solid var(--kg-stroke,#ffffff30);border-radius:20px;background:var(--kg-menu,#242629);box-shadow:inset 0 1px 0 var(--kg-gleam,#ffffff30);-webkit-app-region:no-drag}
-    #panel{position:absolute;right:0;top:37px;width:310px;padding:16px;border-radius:18px;background:var(--kg-menu,#242629);border:1px solid var(--kg-stroke,#ffffff30);box-shadow:inset 0 1px 0 var(--kg-gleam,#ffffff30),0 16px 48px #0004;max-height:calc(100vh - 70px);overflow:auto}
-    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}header strong{font-size:15px}#close{background:none;border:0;font-size:20px;line-height:1;padding:4px}
-    .choices{display:grid;gap:7px}.choice{display:flex;align-items:center;gap:11px;background:transparent;border:1px solid var(--kg-stroke,#ffffff30);border-radius:11px;padding:10px;text-align:left}
-    .choice:hover,.action:hover{background:var(--kg-hover,#ffffff14)}.choice[aria-pressed=true]{border-color:var(--kg-focus,#abd1fc);background:var(--kg-selected,#ffffff20)}
-    .choice strong{font-size:13px;font-weight:600}.choice .description{display:block;font-size:11px;color:var(--kg-secondary,#e1e4e9);margin-top:2px}
-    .swatch{width:35px;height:35px;border-radius:9px;flex:none;border:1px solid #ffffff50;box-shadow:inset 0 1px 0 #fff8}
-    #swatch-clear{background:linear-gradient(135deg,#ffffff30,#ffffff08),repeating-conic-gradient(#555 0% 25%,#747474 0% 50%) 0 0/12px 12px}
-    #swatch-color{background:radial-gradient(at 0% 10%,#3b91b3,transparent 75%),radial-gradient(at 100% 100%,#7e55a7,transparent 80%),#111d30}
-    #swatch-image{background:linear-gradient(165deg,#8297a9 45%,#546d69 46%,#304541 75%,#283533 76%);background-size:cover;background-position:center}
-    .control{margin-top:14px;padding-top:12px;border-top:1px solid var(--kg-stroke,#ffffff30)}label{display:flex;align-items:center;justify-content:space-between;gap:8px}
-    output,.note,#status{color:var(--kg-secondary,#e1e4e9)}input[type=range]{width:100%;accent-color:var(--kg-focus,#abd1fc);margin-top:9px}
-    input[type=checkbox]{accent-color:var(--kg-focus,#abd1fc)}.note{font-size:11px;margin:6px 0 0;line-height:1.6}
-    .palette{display:flex;gap:10px}.palette label{display:block;flex:1;font-size:11px}.palette input{display:block;width:100%;height:32px;border:1px solid var(--kg-stroke,#ffffff30);border-radius:7px;padding:2px;margin-top:5px;background:transparent}
-    .action{width:100%;border:1px solid var(--kg-stroke,#ffffff30);border-radius:9px;padding:7px;background:transparent;margin-top:9px}
-    #status{min-height:17px;font-size:11px;margin-top:12px}#original{background:none;border:0;color:var(--kg-secondary,#e1e4e9);font-size:11px;padding:9px 0 0}
-    button:focus-visible,input:focus-visible{outline:2px solid var(--kg-focus,#abd1fc);outline-offset:2px}
-  </style>
-  <button id="toggle" aria-expanded="false" aria-label="開啟佈景切換器">◈ 佈景</button>
-  <section id="panel" hidden aria-label="佈景切換器">
-    <header><strong>玻璃佈景</strong><button id="close" aria-label="關閉">×</button></header>
-    <div class="choices">
-      <button class="choice" data-mode="clear"><span class="swatch" id="swatch-clear" aria-hidden="true"></span><span><strong>無色透明玻璃</strong><span class="description">中性透明 · 亮面邊緣與白色前景</span></span></button>
-      <button class="choice" data-mode="color"><span class="swatch" id="swatch-color" aria-hidden="true"></span><span><strong>多色玻璃</strong><span class="description">自訂三色光暈 · 介面配色一起調整</span></span></button>
-      <button class="choice" data-mode="image"><span class="swatch" id="swatch-image" aria-hidden="true"></span><span><strong>圖片玻璃</strong><span class="description">照片背景 · 中性深色玻璃與白字</span></span></button>
+  shadow.innerHTML = `<style>${panelCss}</style>
+
+  <button id="toggle" aria-expanded="false" aria-haspopup="dialog" aria-controls="panel" aria-label="開啟佈景工作室"><span id="toggle-dot" aria-hidden="true"></span>佈景</button>
+  <section id="panel" hidden role="dialog" aria-modal="false" aria-labelledby="panel-title">
+    <header class="panel-header"><div><div class="eyebrow">CODEX GLASS</div><h1 id="panel-title">佈景工作室</h1><p class="subtitle" id="active-name">替今天的工作換個心情。</p></div><button id="close" aria-label="關閉佈景工作室">×</button></header>
+    <div class="panel-body">
+      <div class="choices" role="group" aria-label="背景種類">
+        <button class="choice" data-mode="clear"><span class="swatch" id="swatch-clear" aria-hidden="true"></span>清透</button>
+        <button class="choice" data-mode="color"><span class="swatch" id="swatch-color" aria-hidden="true"></span>配色</button>
+        <button class="choice" data-mode="image"><span class="swatch" id="swatch-image" aria-hidden="true"></span>圖片</button>
+      </div>
+      <div id="gallery-control">
+        <div class="section-heading"><strong>精選佈景</strong><span>點選縮圖，立即套用</span></div>
+        <div id="gallery" role="group" aria-label="精選配色"></div>
+      </div>
+      <details id="palette-control" hidden><summary>微調這組配色</summary>
+        <div class="palette"><label>底色<input id="color-base" type="color"></label><label>左側光暈<input id="color-left" type="color"></label><label>右側光暈<input id="color-right" type="color"></label></div>
+        <button class="action" id="reset-colors">重設為經典藍紫</button><p class="note">明亮底色會搭配深色字，深色底色會搭配淺色字。</p>
+      </details>
+      <div id="image-control" hidden>
+        <p id="image-name">選一張喜歡的照片，讓它陪你工作。</p>
+        <button class="action" id="choose">選擇背景圖片…</button><input id="file" type="file" accept="image/png,image/jpeg,image/webp,image/avif" hidden>
+        <label for="shade" class="range-label">圖片暗化<output id="shade-value"></output></label><input id="shade" type="range" min="0" max="65">
+        <p class="note">圖片保存在本機。PNG、JPG、WebP、AVIF，最大 12 MB。</p>
+      </div>
+      <div class="control" id="desktop-control">
+        <div class="section-heading" style="margin-top:0"><strong>閱讀舒適度</strong><span>各佈景共用</span></div>
+        <div class="reading-options" role="group" aria-label="閱讀舒適度">
+          <button data-reading="30">輕盈</button><button data-reading="50">均衡</button><button data-reading="85">專注</button>
+        </div>
+        <p class="note">專注模式加厚閱讀區、卡片與輸入框的底色。</p>
+        <label for="opacity" class="range-label"><span id="opacity-label">背景濃度</span><output id="opacity-value"></output></label><input id="opacity" type="range" min="0" max="100" step="1">
+        <div class="range-ends"><span id="opacity-low">更清透</span><span>更濃郁</span></div>
+        <p class="note" id="opacity-note"></p>
+        <details><summary>透明效果</summary>
+          <label for="keep-foreground">保持文字與按鈕清晰<input id="keep-foreground" type="checkbox"></label>
+          <label id="blur-control" for="background-blur" class="range-label">毛玻璃背景<input id="background-blur" type="checkbox"></label>
+          <p class="note">毛玻璃柔化視窗後方的桌面。</p>
+        </details>
+      </div>
     </div>
-    <div class="control" id="palette-control" hidden>
-      <div class="palette"><label>底色<input id="color-base" type="color"></label><label>左側光暈<input id="color-left" type="color"></label><label>右側光暈<input id="color-right" type="color"></label></div>
-      <button class="action" id="reset-colors">還原第一版配色</button><p class="note">底色較亮時自動使用深色字；卡片與輸入框沿用同一組色調。</p>
-    </div>
-    <div class="control" id="desktop-control">
-      <label for="keep-foreground">保持前景清晰<input id="keep-foreground" type="checkbox"></label>
-      <label for="opacity" style="margin-top:12px"><span id="opacity-label">背景不透明度</span><output id="opacity-value"></output></label><input id="opacity" type="range" min="0" max="100" step="1"><p class="note" id="opacity-note"></p>
-      <label id="blur-control" for="background-blur" style="margin-top:10px">模糊背後背景（Acrylic）<input id="background-blur" type="checkbox"></label>
-    </div>
-    <div class="control" id="image-control" hidden>
-      <button class="action" id="choose">選擇圖片…</button><input id="file" type="file" accept="image/png,image/jpeg,image/webp,image/avif" hidden>
-      <label for="shade" style="margin-top:12px">圖片暗化<output id="shade-value"></output></label><input id="shade" type="range" min="0" max="65">
-      <p class="note">圖片只存在本機。支援 PNG、JPG、WebP、AVIF，最大 12 MB。</p>
-    </div>
-    <div id="status" role="status"></div><button id="original">還原原始外觀</button>
+    <footer class="panel-footer"><div class="footer-actions"><button id="original">還原 Codex 原始外觀</button><button id="done">完成</button></div><div id="status" role="status" aria-live="polite"></div></footer>
   </section>`;
   document.body.append(host);
   const $ = id => shadow.getElementById(id);
+  for (const preset of presets) {
+    const appearance = appearanceFor({...prefs,mode:'color',colors:preset.colors,surfaceStrength:50});
+    const button = document.createElement('button');
+    button.className = 'preset'; button.dataset.preset = preset.id;
+    button.setAttribute('aria-label', `${preset.name}，${preset.family}`);
+    button.innerHTML = '<span class="preset-preview" aria-hidden="true"><span class="mini-app"><span class="mini-sidebar"></span><span class="mini-content"></span></span></span><span class="preset-copy"><strong></strong><small></small></span><span class="preset-check" aria-hidden="true">✓</span>';
+    button.querySelector('strong').textContent = preset.name;
+    button.querySelector('small').textContent = preset.family;
+    const preview = button.querySelector('.preset-preview');
+    preview.style.background = appearance.background;
+    for (const [name,key] of Object.entries({main:'--kg-main',sidebar:'--kg-sidebar',stroke:'--kg-stroke',text:'--kg-primary',composer:'--kg-composer'})) preview.style.setProperty('--preview-'+name,appearance.variables[key]);
+    button.onclick = () => { prefs.mode = 'color'; prefs.colors = {...preset.colors}; apply(); };
+    $('gallery').append(button);
+  }
+  const selectedPreset = () => presets.find(p => Object.keys(firstColors).every(k => p.colors[k].toLowerCase() === prefs.colors[k].toLowerCase()));
   const save = () => { try { localStorage.setItem(key, JSON.stringify(prefs)); } catch { $('status').textContent = '目前可用，但無法儲存偏好。'; } };
   function restoreTheme() {
     root.removeAttribute('data-ken-glass');
@@ -87,7 +101,7 @@
   }
   function status() {
     $('status').textContent = prefs.mode === 'original' ? '已還原原始外觀' :
-      prefs.keepForeground ? `前景清晰 · 背景 ${prefs.backgroundOpacity}% · ${prefs.backgroundBlur ? 'Acrylic' : '清透玻璃'}` : `共用視窗不透明度 · ${prefs.opacity}%`;
+      prefs.keepForeground ? `已自動儲存 · 背景 ${prefs.backgroundOpacity}% · ${prefs.backgroundBlur ? '毛玻璃' : '清透玻璃'}` : `已自動儲存 · 視窗不透明度 ${prefs.opacity}%`;
   }
   function native(force = false) {
     const value = {mode:prefs.mode === 'original' ? 'restore' : prefs.keepForeground ? 'background' : prefs.opacity === 100 ? 'restore' : 'set', opacity:prefs.keepForeground ? 100 : prefs.opacity, blur:prefs.backgroundBlur};
@@ -109,7 +123,8 @@
       expectedTheme = appearance.theme;
       // Build directly from preferences, never from the current app's computed
       // background (which can be midway through a native theme transition).
-      style.textContent = `html[data-ken-glass]{${Object.entries(appearance.variables).map(([k,v]) => `${k}:${v};`).join('')}}\n${css}`;
+      const nextCSS = `html[data-ken-glass]{${Object.entries(appearance.variables).map(([k,v]) => `${k}:${v};`).join('')}}\n${css}`;
+      if (style.textContent !== nextCSS) style.textContent = nextCSS;
       root.setAttribute('data-ken-glass', mode);
       root.setAttribute('data-theme', expectedTheme);
       background.style.background = appearance.background;
@@ -119,6 +134,13 @@
       if (imageURL) $('swatch-image').style.backgroundImage = `url(${JSON.stringify(imageURL)})`;
     }
     shadow.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+    const preset = mode === 'color' ? selectedPreset() : null;
+    shadow.querySelectorAll('[data-preset]').forEach(b => b.setAttribute('aria-pressed',String(b.dataset.preset === preset?.id)));
+    shadow.querySelectorAll('[data-reading]').forEach(b => b.setAttribute('aria-pressed',String(Number(b.dataset.reading) === prefs.surfaceStrength)));
+    $('active-name').textContent = mode === 'color' ? `${preset?.name || '我的配色'} · ${expectedTheme === 'light' ? '明亮' : '深色'}玻璃` : mode === 'image' ? '圖片玻璃 · 讓喜歡的風景陪你工作' : mode === 'original' ? 'Codex 原始外觀' : '清透玻璃 · 留一點空間給桌面風景';
+    $('toggle-dot').style.background = mode === 'color' ? appearanceFor(prefs).background : mode === 'image' && imageURL ? `url(${JSON.stringify(imageURL)}) center/cover` : 'linear-gradient(135deg,#b5bdc9,#687686)';
+    $('toggle').title = $('active-name').textContent;
+    $('gallery-control').hidden = mode === 'image';
     $('desktop-control').hidden = mode === 'original';
     $('palette-control').hidden = mode !== 'color'; $('image-control').hidden = mode !== 'image';
     for (const k of Object.keys(firstColors)) $('color-' + k).value = prefs.colors[k];
@@ -127,19 +149,27 @@
     $('opacity').min = prefs.keepForeground ? '0' : '55';
     $('opacity').value = prefs.keepForeground ? prefs.backgroundOpacity : prefs.opacity;
     $('opacity-value').textContent = $('opacity').value + '%';
-    $('opacity-label').textContent = prefs.keepForeground ? '背景不透明度' : '視窗不透明度';
-    $('opacity-note').textContent = prefs.keepForeground ? '三種佈景共用。只淡化背景，文字與按鈕保持清晰；關閉模糊就是清透玻璃。' : '三種佈景共用；降低後文字也會一起變透明。';
+    $('opacity-label').textContent = prefs.keepForeground ? '背景濃度' : '視窗不透明度';
+    $('opacity-low').textContent = prefs.keepForeground ? '更清透' : '更透明';
+    $('opacity-note').textContent = prefs.keepForeground ? '調整背景的濃淡，文字與按鈕維持清晰。' : '整個視窗一起變透明，包含文字與按鈕。';
+    $('image-name').textContent = imageURL ? (typeof prefs.imageName === 'string' ? prefs.imageName : '已儲存的背景圖片') : '選一張喜歡的照片，讓它陪你工作。';
     $('shade').value = prefs.imageShade; $('shade-value').textContent = prefs.imageShade + '%';
     save(); if (updateNative || themeChanged) native(themeChanged); else if (!nativeFailed) status();
   }
-  function open(value) { $('panel').hidden = !value; $('toggle').setAttribute('aria-expanded', String(value)); }
-  $('toggle').onclick = () => open($('panel').hidden); $('close').onclick = () => open(false);
+  function open(value, returnFocus = false) {
+    $('panel').hidden = !value; $('toggle').setAttribute('aria-expanded', String(value));
+    if (value) (shadow.querySelector('.choice[aria-pressed="true"]') || $('close')).focus({preventScroll:true});
+    else if (returnFocus) $('toggle').focus({preventScroll:true});
+  }
+  $('toggle').onclick = () => open($('panel').hidden);
+  $('close').onclick = $('done').onclick = () => open(false,true);
   shadow.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
     prefs.mode = b.dataset.mode; apply();
     if (prefs.mode === 'image' && !imageURL) $('status').textContent = '選擇一張圖片，就能套用背景。';
   });
   for (const k of Object.keys(firstColors)) $('color-' + k).oninput = () => { prefs.colors[k] = $('color-' + k).value; apply(false); };
   $('reset-colors').onclick = () => { prefs.colors = {...firstColors}; apply(false); };
+  shadow.querySelectorAll('[data-reading]').forEach(b => b.onclick = () => { prefs.surfaceStrength = Number(b.dataset.reading); apply(false); });
   $('original').onclick = () => { prefs.mode = 'original'; apply(); };
   $('opacity').oninput = () => {
     prefs[prefs.keepForeground ? 'backgroundOpacity' : 'opacity'] = Number($('opacity').value);
@@ -173,7 +203,9 @@
     const url = await new Promise((r,j) => { const reader = new FileReader(); reader.onload = () => r(reader.result); reader.onerror = () => j(Error('圖片讀取失敗。')); reader.readAsDataURL(file); });
     const img = new Image(); img.src = url; await img.decode();
     if (img.naturalWidth * img.naturalHeight > 60000000) throw Error('圖片尺寸太大，請縮小後再選擇。');
-    await storeImage(url); imageURL = url; prefs.mode = 'image'; apply(); $('status').textContent = '圖片已儲存在本機。';
+    await storeImage(url);
+    if (disposed) return;
+    imageURL = url; prefs.imageName = file.name; prefs.mode = 'image'; apply(); $('status').textContent = '圖片已儲存在本機。';
   }
   $('file').onchange = async () => { try { await importFile($('file').files[0]); } catch(e) { $('status').textContent = e.message; } finally { $('file').value = ''; } };
   let checkScheduled = false, themeRepairs = 0, backdropRepairs = 0;
@@ -199,12 +231,21 @@
   if (title) titleGuard.observe(title,{childList:true,characterData:true,subtree:true});
   const unsubscribeSystemTheme = window.electronBridge?.subscribeToSystemThemeVariant?.(scheduleBackdropCheck);
   const outside = event => { if (!event.composedPath().includes(host)) open(false); };
-  const escape = event => { if (event.key === 'Escape') open(false); };
+  const escape = event => {
+    if ($('panel').hidden) return;
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); open(false,true); }
+    if (event.key === 'Tab' && event.composedPath().includes(host)) {
+      const elements = [...$('panel').querySelectorAll('button,input,summary')].filter(el => !el.disabled && el.getClientRects().length);
+      const first = elements[0], last = elements.at(-1);
+      if (event.shiftKey && shadow.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && shadow.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }
+  };
   const activated = scheduleBackdropCheck;
   const visible = () => { if (document.visibilityState === 'visible') activated(); };
   window.addEventListener('message',backdropChanged);
   window.addEventListener('focus',activated); document.addEventListener('visibilitychange',visible);
-  document.addEventListener('pointerdown',outside); document.addEventListener('keydown',escape);
+  document.addEventListener('pointerdown',outside); document.addEventListener('keydown',escape,true);
   window.__kenGlassNativeResult = (ok,message) => {
     if (disposed) return;
     nativeFailed = !ok;
@@ -226,7 +267,7 @@
       disposed = true; themeGuard.disconnect(); titleGuard.disconnect(); unsubscribeSystemTheme?.();
       window.removeEventListener('message',backdropChanged);
       window.removeEventListener('focus',activated); document.removeEventListener('visibilitychange',visible);
-      document.removeEventListener('pointerdown',outside); document.removeEventListener('keydown',escape);
+      document.removeEventListener('pointerdown',outside); document.removeEventListener('keydown',escape,true);
       host.remove(); background.remove(); root.removeAttribute('data-ken-glass');
       if (restore) { style.remove(); restoreTheme(); delete window.__kenGlassOriginalTheme; }
       delete window.__kenGlassPanel; delete window.__kenGlassNativeResult;
@@ -240,4 +281,4 @@
     imageURL = url; $('swatch-image').style.backgroundImage = `url(${JSON.stringify(imageURL)})`;
     if (prefs.mode === 'image') apply(false);
   }).catch(() => { if (!disposed && prefs.mode === 'image') $('status').textContent = '無法讀取已儲存的圖片，請重新選擇。'; });
-})(CSS_PLACEHOLDER, APPEARANCE_PLACEHOLDER);
+})(CSS_PLACEHOLDER, APPEARANCE_PLACEHOLDER, PRESETS_PLACEHOLDER, PANEL_CSS_PLACEHOLDER);

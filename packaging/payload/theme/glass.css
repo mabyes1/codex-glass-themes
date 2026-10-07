@@ -180,7 +180,7 @@ html[data-ken-glass] [data-composer-surface-variant] {
   box-shadow:inset 0 0 0 1px var(--kg-stroke),inset 0 1px 0 var(--kg-gleam),0 8px 28px var(--kg-shadow)!important;
 }
 html[data-ken-glass] [data-composer-surface-variant]:focus-within {
-  box-shadow:inset 0 0 0 1px var(--kg-focus),inset 0 1px 0 var(--kg-gleam),0 8px 28px var(--kg-shadow)!important;
+  box-shadow:inset 0 0 0 1px var(--kg-focus),inset 0 1px 0 var(--kg-gleam),0 0 0 3px var(--kg-accent-wash),0 8px 28px var(--kg-shadow)!important;
 }
 html[data-ken-glass] [data-composer-body] {
   background:transparent!important;
@@ -204,3 +204,15 @@ html[data-ken-glass] [role='dialog'],html[data-ken-glass] [role='menu'] {
   box-shadow:0 16px 48px var(--kg-shadow),inset 0 0 0 1px var(--kg-stroke),inset 0 1px 0 var(--kg-gleam)!important;
 }
 html[data-ken-glass] ::selection {background:var(--kg-selected);}
+/* Restrict decoration to the observed navigation controls and reading surface. */
+html[data-ken-glass] aside.app-shell-left-panel [data-sidebar-destination][aria-current='page'] {
+  background:var(--kg-accent-wash)!important;
+  box-shadow:inset 0 0 0 1px var(--kg-stroke)!important;
+}
+html[data-ken-glass] .thread-scroll-container pre {
+  border:1px solid var(--kg-stroke);border-radius:12px;
+  text-shadow:none;
+}
+html[data-ken-glass] .thread-scroll-container {
+  scrollbar-color:var(--kg-stroke) transparent;
+}

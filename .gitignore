@@ -1,7 +1,15 @@
 .runtime/
+.runtime-auto/
+.arg/
 node_modules/
+/packaging/vendor/
+/packaging/build/
+/dist/
+/experiments/
+installation.json
 *.log
 *.zip
 *.exe
+*.dll
 .DS_Store
 Thumbs.db
