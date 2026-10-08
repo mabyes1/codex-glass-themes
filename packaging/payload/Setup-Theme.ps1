@@ -1,5 +1,6 @@
 param([ValidateSet('Check','Stage','Install','Uninstall')][string]$Action='Install',[string]$InstallRoot=(Join-Path $env:USERPROFILE 'CodexGlass'))
 $ErrorActionPreference='Stop'
+Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop
 [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
 $product='CodexGlassThemes';$sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 $InstallRoot=[IO.Path]::GetFullPath($InstallRoot).TrimEnd('\')
@@ -37,7 +38,7 @@ function Assert-InstallRoot {
 function Get-Requirements {
     if(![Environment]::Is64BitProcess -or $env:PROCESSOR_ARCHITECTURE -ne 'AMD64'){throw '此安裝包適用 Windows x64。'}
     $os=Get-CimInstance Win32_OperatingSystem
-    if([int]$os.BuildNumber -lt 22621){throw '玻璃背景需要 Windows 11 22621 或更新版本。'}
+    if([int]$os.BuildNumber -lt 19045){throw '此相容版需要 Windows 10 22H2 (19045) 或更新版本。'}
     $package=Get-AppxPackage -Name OpenAI.Codex|Where-Object {$_.Status -eq 'Ok' -and $_.PackageFullName -match '^OpenAI\.Codex_[0-9.]+_x64__2p2nqsd0c76g0$'}|Sort-Object Version -Descending|Select-Object -First 1
     if(!$package -or !(Test-Path -LiteralPath (Join-Path $package.InstallLocation 'app\ChatGPT.exe'))){throw '請先安裝官方 Windows x64 Codex 桌面版，再執行此安裝程式。'}
     $alias=Join-Path $InstallRoot '.arg\0001\ChatGPT.exe';$image=Join-Path $package.InstallLocation 'app\ChatGPT.exe'

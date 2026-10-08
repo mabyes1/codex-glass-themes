@@ -5,6 +5,7 @@
     document.getElementById(id)?.remove();
   }
   const root = document.documentElement;
+  const compatibility = window.__kenGlassWin10Compat === true;
   if (window.__kenGlassOriginalTheme === undefined) window.__kenGlassOriginalTheme = root.getAttribute('data-theme');
   const key = 'ken-glass-preferences-v1';
   const firstColors = {base:'#111d30', left:'#3b91b3', right:'#7e55a7'};
@@ -111,10 +112,10 @@
   }
   function status() {
     $('status').textContent = prefs.mode === 'aquarium' ? `已自動儲存 · 毛玻璃水族館 · ${aquarium.getDiagnostics().running ? '魚兒悠游中' : '靜靜看海'}` : prefs.mode === 'original' ? '已還原原始外觀' :
-      prefs.keepForeground ? `已自動儲存 · 背景 ${prefs.backgroundOpacity}% · ${prefs.backgroundBlur ? '毛玻璃' : '清透玻璃'}` : `已自動儲存 · 視窗不透明度 ${prefs.opacity}%`;
+      prefs.keepForeground ? `已自動儲存 · 背景 ${prefs.backgroundOpacity}% · ${compatibility ? 'Windows 10 模擬玻璃' : prefs.backgroundBlur ? '毛玻璃' : '清透玻璃'}` : `已自動儲存 · 視窗不透明度 ${prefs.opacity}%`;
   }
   function native(force = false) {
-    const value = {mode:prefs.mode === 'original' ? 'restore' : prefs.keepForeground ? 'background' : prefs.opacity === 100 ? 'restore' : 'set', opacity:prefs.keepForeground ? 100 : prefs.opacity, blur:prefs.mode === 'aquarium' || prefs.backgroundBlur};
+    const value = {mode:prefs.mode === 'original' ? 'restore' : prefs.keepForeground ? compatibility ? 'restore' : 'background' : prefs.opacity === 100 ? 'restore' : 'set', opacity:prefs.keepForeground ? 100 : prefs.opacity, blur:!compatibility && (prefs.mode === 'aquarium' || prefs.backgroundBlur)};
     const signature = JSON.stringify(value);
     if (!force && signature === nativeSignature) { if (!nativeFailed) status(); return; }
     if (typeof window.__kenGlassNative !== 'function') { $('status').textContent = '透明度助手未連線，請確認背景助手正在執行。'; return; }
@@ -133,11 +134,12 @@
       expectedTheme = appearance.theme;
       // Build directly from preferences, never from the current app's computed
       // background (which can be midway through a native theme transition).
-      const nextCSS = `html[data-ken-glass]{${Object.entries(appearance.variables).map(([k,v]) => `${k}:${v};`).join('')}}\n${css}`;
+      const nextCSS = `html[data-ken-glass]{${Object.entries(appearance.variables).map(([k,v]) => `${k}:${v};`).join('')}}\n${css}` + (compatibility ? `\nhtml[data-ken-glass]{background:${appearance.theme === 'light' ? '#e6e9ef' : '#10141b'}!important}` : '');
       if (style.textContent !== nextCSS) style.textContent = nextCSS;
       root.setAttribute('data-ken-glass', mode);
       root.setAttribute('data-theme', expectedTheme);
       background.style.background = appearance.background;
+      if (compatibility) background.style.filter = prefs.backgroundBlur ? 'blur(12px)' : '';
       background.style.opacity = String(prefs.keepForeground && !nativeFailed ? backgroundStrength() / 100 : 1);
       background.hidden = false;
       $('swatch-color').style.background = appearanceFor({...prefs,mode:'color'}).background;
@@ -166,6 +168,12 @@
     $('opacity-label').textContent = prefs.keepForeground ? mode === 'aquarium' ? '水色濃度' : '背景濃度' : '視窗不透明度';
     $('opacity-low').textContent = prefs.keepForeground ? '更清透' : '更透明';
     $('opacity-note').textContent = prefs.keepForeground ? '調整背景的濃淡，文字與按鈕維持清晰。' : '整個視窗一起變透明，包含文字與按鈕。';
+    if (compatibility) {
+      $('panel-title').textContent = '佈景工作室 · Windows 10';
+      $('blur-control').firstChild.textContent = '柔化佈景背景';
+      $('blur-control').nextElementSibling.textContent = '模擬玻璃效果，柔化圖片與配色；不透出桌面。';
+      if (mode === 'clear') $('active-name').textContent = '中性玻璃 · Windows 10 相容模式';
+    }
     $('image-name').textContent = imageURL ? (typeof prefs.imageName === 'string' ? prefs.imageName : '已儲存的背景圖片') : '選一張喜歡的照片，讓它陪你工作。';
     $('shade').value = prefs.imageShade; $('shade-value').textContent = prefs.imageShade + '%';
     save(); if (updateNative || themeChanged) native(themeChanged); else if (!nativeFailed) status();
@@ -192,7 +200,7 @@
   };
   $('opacity').onchange = () => { apply(); };
   $('keep-foreground').onchange = () => { prefs.keepForeground = $('keep-foreground').checked; apply(); };
-  $('background-blur').onchange = () => { prefs.backgroundBlur = $('background-blur').checked; native(); save(); };
+  $('background-blur').onchange = () => { prefs.backgroundBlur = $('background-blur').checked; apply(); };
   $('shade').oninput = () => { prefs.imageShade = Number($('shade').value); apply(false); };
   $('choose').onclick = () => $('file').click();
   function database() {

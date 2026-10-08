@@ -7,6 +7,9 @@ import {createGlassAppearance} from './glass-design.mjs';
 import {glassPresets} from './glass-presets.mjs';
 import {createAquariumLayer} from './aquarium.mjs';
 import {startBackdropWatch} from './native-watch.mjs';
+import {getWindowsAppearancePolicy} from './windows-compat.mjs';
+import {release} from 'node:os';
+const compatibility=getWindowsAppearancePolicy(release()).compatibility;
 const exec=promisify(execFile),dir=dirname(fileURLToPath(import.meta.url)),runtime=join(dir,'.runtime');
 await mkdir(runtime,{recursive:true});
 const stopFile=join(runtime,'stop'),pidFile=join(runtime,'host.pid');
@@ -16,7 +19,7 @@ const panelCss=await readFile(join(dir,'theme-panel.css'),'utf8');
 const aquariumImage='data:image/png;base64,'+(await readFile(join(dir,'assets/deep-sea.png'))).toString('base64');
 const fishAtlas='data:image/png;base64,'+(await readFile(join(dir,'assets/fish-atlas.png'))).toString('base64');
 const reefAtlas='data:image/png;base64,'+(await readFile(join(dir,'assets/fish-atlas-reef.png'))).toString('base64');
-const source=(await readFile(join(dir,'theme-panel.js'),'utf8'))
+const source=`window.__kenGlassWin10Compat=${compatibility};\n`+(await readFile(join(dir,'theme-panel.js'),'utf8'))
  .replace('CSS_PLACEHOLDER',()=>JSON.stringify(css))
  .replace('APPEARANCE_PLACEHOLDER',()=>createGlassAppearance.toString())
  .replace('PRESETS_PLACEHOLDER',()=>JSON.stringify(glassPresets))
@@ -104,7 +107,7 @@ async function connect(){
 }
 process.on('SIGINT',()=>stopping=true);process.on('SIGTERM',()=>stopping=true);
 try{
- backdropWatch=await startBackdropWatch(dir,runtime,exec,backdropRepaired,backdropRepairFailed);
+ if(!compatibility)backdropWatch=await startBackdropWatch(dir,runtime,exec,backdropRepaired,backdropRepairFailed);
  while(!stopping){
   try{await access(stopFile);stopping=true;break}catch{}
   if(!socket||socket.readyState!==1){try{await connect()}catch(e){console.error(new Date().toISOString(),e.message);socket?.close();socket=null}}
