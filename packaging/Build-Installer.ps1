@@ -31,7 +31,7 @@ if($LASTEXITCODE -ne 0){throw 'Native backdrop helper compilation failed'}
 $files=@(Get-ChildItem -LiteralPath $stage -File -Recurse|Sort-Object FullName|ForEach-Object {
     [ordered]@{path=$_.FullName.Substring($stage.Length+1).Replace('\','/');bytes=$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}
 })
-$manifest=[ordered]@{product='CodexGlassThemes';version=$Version;nodeVersion='24.21.0';platform='windows-x64';minimumWindowsBuild=22621;packageName='OpenAI.Codex';files=$files}
+$manifest=[ordered]@{product='CodexGlassThemes';version=$Version;nodeVersion='24.21.0';platform='windows-x64';minimumWindowsBuild=19045;packageName='OpenAI.Codex';edition='win10-renderer-glass';files=$files}
 [IO.File]::WriteAllText((Join-Path $stage 'payload.json'),($manifest|ConvertTo-Json -Depth 5),[Text.UTF8Encoding]::new($false))
 Add-Type -AssemblyName System.IO.Compression,System.IO.Compression.FileSystem
 $archive=Join-Path $buildRoot 'payload.zip'
