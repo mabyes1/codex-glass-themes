@@ -47,6 +47,8 @@ npm run test:cdp
 
 The appearance tests cover contrast, preset differences, neutral glass, image shading, and reading surfaces. The PowerShell tests check that CDP discovery selects the app's owned listener, rejects unrelated listeners and pet windows, and avoids occupied ports.
 
+`npm run test:compat-browser` additionally exercises the real theme panel in a separate headless Chromium profile under both appearance policies: colors, local image storage, background strength, aquarium/Cosmos, blur, whole-window opacity, restoration and disposal. It discovers Edge/Chrome on Windows, or accepts `CHROME_PATH`. Reports and screenshots are saved under ignored `experiments/compat-browser-*`. The native bridge is stubbed: this validates renderer interactions and requested native modes, not actual DWM effects or Windows 10 installation.
+
 On Windows 11 x64 with the official Codex package installed, the installer harness performs isolated extraction/deployment and ownership/removal checks:
 
 ```powershell

@@ -88,7 +88,7 @@ internal sealed class SetupForm:Form {
         var title=new Label{Text=action=="Uninstall"?"解除安裝自動主題":"讓每次啟動，都有喜歡的佈景。",Location=new Point(28,25),Size=new Size(570,42),Font=new Font(Font.FontFamily,19,FontStyle.Bold),ForeColor=Color.FromArgb(34,43,68)};
         var detail=new Label{Text="ChatGPT.exe · Windows Codex 桌面版\r\n安裝後照常開啟原圖示，配色、圖片與玻璃效果自動套用。",Location=new Point(30,80),Size=new Size(560,54)};
         var path=new Label{Text="安裝位置："+root,Location=new Point(30,145),Size=new Size(560,36),AutoEllipsis=true,ForeColor=Color.FromArgb(80,90,110)};
-        status=new Label{Text="適用 Windows 11 x64（22621 以上）；請先安裝官方 Codex。",Location=new Point(30,190),Size=new Size(560,40)};
+        status=new Label{Text="適用 Windows 10 22H2 / Windows 11 x64（19045 以上）；請先安裝官方 Codex。",Location=new Point(30,190),Size=new Size(560,40)};
         progress=new ProgressBar{Location=new Point(30,239),Size=new Size(560,8),Visible=false};
         log=new TextBox{Location=new Point(30,261),Size=new Size(560,99),Multiline=true,ReadOnly=true,ScrollBars=ScrollBars.Vertical,BorderStyle=BorderStyle.None,BackColor=BackColor,Font=new Font("Microsoft JhengHei UI",9)};
         install=new Button{Text=action=="Uninstall"?"解除安裝":"安裝並啟用",Location=new Point(411,381),Size=new Size(179,38),FlatStyle=FlatStyle.Flat,BackColor=Color.FromArgb(73,91,170),ForeColor=Color.White};

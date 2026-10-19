@@ -42,7 +42,7 @@ Galaxy artwork and its [generation prompt](docs/art/milky-way-prompt.md) are inc
 
 | Requirement | Supported configuration |
 | --- | --- |
-| Operating system | Windows 11, build 22621 or newer |
+| Operating system | Windows 10 22H2, build 19045 or newer |
 | Architecture | x64; ARM64 is not supported by this installer |
 | App | Official Windows Codex, package `OpenAI.Codex` |
 | Account | Install while signed in to the Windows account that uses Codex |
@@ -129,3 +129,11 @@ The distributable installer passed extraction and isolated file deployment, bund
 ## Source and bundled software
 
 The installer, callback helpers, theme assets, and focused tests are in this repository. See **[Building and testing](packaging/README.md)** for the source layout and commands. The installer includes unmodified [Node.js 24.21.0 for Windows x64](https://nodejs.org/dist/v24.21.0/); its license and third-party notices are installed as `runtime/NODE-LICENSE.txt`.
+
+## Windows 10 compatibility
+
+Supported Windows builds below 22621 use simulated glass inside an opaque renderer. Colors, local wallpaper, aquarium, Cosmos, reading surfaces and background strength remain available. Background softening blurs the theme layer rather than the desktop. Disabling Keep text and buttons opaque enables the existing whole-window opacity mode, which also fades text.
+
+Windows 11 build 22621 and newer retain the original native backdrop and backdrop watcher. Windows 11 build 22000 uses the same compatibility fallback because the required backdrop API is unavailable. The installer path, startup registration, uninstall identity and stored preferences are shared across supported Windows versions.
+
+The PR author reported Windows 10 browser interactions and installation of an earlier Windows 10-only edition. Merge review passed automated appearance/routing tests, real Chromium panel interactions for both policies (with the native bridge stubbed), and a combined installer build. A complete install/launch/uninstall cycle on Windows 10 and Windows 11 visual verification of this combined build remain pending.

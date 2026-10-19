@@ -42,7 +42,7 @@
 
 | 項目 | 支援範圍 |
 | --- | --- |
-| 作業系統 | Windows 11，組建 22621 以上 |
+| 作業系統 | Windows 10 22H2 / Windows 11，組建 19045 以上 |
 | 架構 | x64；此安裝包尚未支援 ARM64 |
 | 應用程式 | 官方 Windows Codex，套件名稱 `OpenAI.Codex` |
 | 帳戶 | 使用平常操作 Codex 的 Windows 帳戶安裝 |
@@ -121,6 +121,8 @@ $setup = '.\ChatGPT-Glass-Themes-Setup-1.2.0-win-x64.exe'
 套件除錯模式啟用期間，也會改變 Windows 對該套件的自動暫停、恢復與終止行為。這不是官方主題擴充介面，詳見 [Microsoft 套件除錯文件](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-ipackagedebugsettings-enabledebugging) 與 [原始碼／建置說明](packaging/README.md#繁體中文)。
 
 ## 目前驗證到哪裡？
+
+Windows 10 22H2（19045）與 Windows 11 22000 使用視窗內的模擬玻璃；配色、圖片、水族館、宇宙背景與閱讀表面保留，背景柔化不會透出或模糊桌面。關閉「保持前景清晰」可使用原有的整窗透明度，但文字也會一起變透明。Windows 11 22621 以上繼續使用原生玻璃與背景監看助手。跨版本完整安裝、啟動及移除驗收仍待完成。
 
 原方案已在開發機完成實際冷啟動：從官方入口開啟後，渲染器正常，CDP 與主題自動掛上，原資料目錄中的配色及圖片也已帶回。
 
