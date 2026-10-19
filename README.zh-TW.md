@@ -2,7 +2,7 @@
 
 **一點玻璃、一點色彩，讓工作空間更像你。**
 
-[English](README.md) · [繁體中文](README.zh-TW.md) · [下載 v1.2.0](https://github.com/mabyes1/codex-glass-themes/releases/tag/v1.2.0) · [建置最新原始碼](packaging/README.md#繁體中文)
+[English](README.md) · [繁體中文](README.zh-TW.md) · [下載 v1.3.0 EXE](https://github.com/mabyes1/codex-glass-themes/releases/download/v1.3.0/ChatGPT-Glass-Themes-Setup-1.3.0-win-x64.exe) · [從原始碼建置](packaging/README.md#繁體中文)
 
 替 Windows Codex 換上喜歡的氣氛：清透玻璃、自己的照片、安靜的深海，或緩緩流動的銀河。背景可以有個性，文字依然清楚；設定會自動保存，平常照樣使用原本的 Codex 圖示開啟。
 
@@ -10,7 +10,7 @@
 
 *實際 Windows Codex 介面，畫面中是公開的[示範文件](docs/demo.md)。四種海底場景、魚群密度與暫停開關，都在同一個面板裡。*
 
-> **原始碼與下載版不同。** 圖片展示的是尚未發布的最新原始碼。目前公開的 **v1.2.0 安裝檔發布於 2026-10-07**，還沒有宇宙背景、Windows 10 相容模式及這次的啟動恢復修正。想使用這些變更，請從最新原始碼建置；目前尚未發布新的穩定安裝版。
+> **v1.3.0 候選安裝版已提供下載。** 這份 EXE 包含上圖的新場景、Windows 10 相容模式及最新啟動恢復修正。建置、獨立安裝器檢查與本機 Windows 11 恢復已通過；完整登入／冷啟動與乾淨 Windows 10 安裝仍待驗收。安裝前請閱讀[版本說明](https://github.com/mabyes1/codex-glass-themes/releases/tag/v1.3.0)。
 
 ## 想換什麼氣氛？
 
@@ -40,12 +40,12 @@
 
 | 版本 | Windows 支援範圍 |
 | --- | --- |
-| **最新原始碼** | Windows 10 22H2 / Windows 11，組建 19045 以上。低於 22621 使用不透明視窗內的模擬玻璃。 |
-| **已發布的 v1.2.0 安裝檔** | Windows 11 x64，組建 22621 以上。這份舊安裝檔尚未包含 Windows 10 相容模式。 |
+| **v1.3.0 候選版／最新原始碼** | Windows 10 22H2 / Windows 11，組建 19045 以上。低於 22621 使用不透明視窗內的模擬玻璃。 |
+| **較舊的 v1.2.0 安裝檔** | Windows 11 x64，組建 22621 以上。這份舊安裝檔尚未包含 Windows 10 相容模式。 |
 
 Windows 11 22621 以上使用原生背景效果。較舊的支援版本會柔化視窗內的佈景，不會透出或模糊桌面。此安裝包不支援 ARM64。
 
-1. [下載已發布的安裝檔](https://github.com/mabyes1/codex-glass-themes/releases/tag/v1.2.0)；若要使用上面的新功能，請[建置最新原始碼](packaging/README.md#繁體中文)。
+1. [下載 v1.3.0 候選安裝檔](https://github.com/mabyes1/codex-glass-themes/releases/download/v1.3.0/ChatGPT-Glass-Themes-Setup-1.3.0-win-x64.exe)，或[從原始碼建置](packaging/README.md#繁體中文)。
 2. 使用自己的普通 Windows 帳戶執行，按 **「安裝並啟用」**。預設位置是 `%USERPROFILE%\CodexGlass`。
 3. 若安裝時 Codex 已經在執行，先完成手上的工作，再**完整退出一次**，然後從原本的開始功能表或工作列圖示開啟。
 4. 點視窗上方的 **「佈景」**，選擇喜歡的模式。
@@ -87,7 +87,7 @@ Windows 11 22621 以上使用原生背景效果。較舊的支援版本會柔化
 
 2026-10-19 的變更通過 **31 項 Node 測試**、兩種效果路徑的真實 Chromium 面板操作、實際排程恢復，以及獨立官方套件啟動的 CDP／渲染器檢查。開發電腦保留原本的 Codex 程序，已確認原生背景恢復正常。完整範圍見[驗證說明](docs/startup-recovery.md#verification)。
 
-**仍待驗收：** 修正後的完整登出／登入與一般冷啟動，以及另一台乾淨 Windows 10／11 電腦的安裝、啟動、移除。瀏覽器測試使用替代的原生橋接，不能代替 Windows 10 實機結果。目前仍是開發快照。
+v1.3.0 EXE 也通過獨立解包／部署、原生助手與套件位置查詢、衝突保護及移除檢查。**仍待驗收：** 修正後的完整登出／登入與一般冷啟動，以及另一台乾淨 Windows 10／11 電腦的安裝、啟動、移除。瀏覽器測試使用替代的原生橋接，不能代替 Windows 10 實機結果，因此這次標示為候選版。
 
 ## 它如何運作？
 

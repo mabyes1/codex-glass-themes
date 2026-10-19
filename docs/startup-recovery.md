@@ -31,7 +31,7 @@ The watcher writes a fresh heartbeat. The theme probe now records native readine
 | Existing live Windows 11 app | Same main PID/creation identity preserved; updated helper loaded without closing Codex. Renderer reported `nativeReady=true`, `nativeFailed=false`, `nativePending=false`; Windows reported Acrylic backdrop value `3`. |
 | Saved settings | Capture settings were restored after the README screenshots; local wallpaper storage was not replaced. |
 
-The live installation received the host recovery and watcher changes. The GitHub Releases installer was not replaced.
+The live installation received the host recovery and watcher changes. A new v1.3.0 preview EXE was subsequently built and published with these changes; its isolated installer checks passed. Existing v1.2.0 assets were retained.
 
 ## Remaining acceptance
 

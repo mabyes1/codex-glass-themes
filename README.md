@@ -2,7 +2,7 @@
 
 **Soft glass. Your colors. A whole ocean of ideas.**
 
-[English](README.md) · [繁體中文](README.zh-TW.md) · [Download v1.2.0](https://github.com/mabyes1/codex-glass-themes/releases/tag/v1.2.0) · [Build the latest source](packaging/README.md)
+[English](README.md) · [繁體中文](README.zh-TW.md) · [Download v1.3.0 EXE](https://github.com/mabyes1/codex-glass-themes/releases/download/v1.3.0/ChatGPT-Glass-Themes-Setup-1.3.0-win-x64.exe) · [Build from source](packaging/README.md)
 
 Make the Windows Codex app feel like your workspace. Choose clear glass, a favorite image, a quiet aquarium, or the Milky Way. Keep text readable, save your preferences, and launch Codex from its usual icon.
 
@@ -10,7 +10,7 @@ Make the Windows Codex app feel like your workspace. Choose clear glass, a favor
 
 *The actual Windows Codex app, showing a [demo document](docs/demo.md). Four ocean scenes, adjustable fish density, and a pause control live in the theme panel.*
 
-> **Source and download are different.** These screenshots show the latest, unreleased source. The published **v1.2.0 installer is from October 7, 2026** and does not include Cosmos, Windows 10 compatibility, or the latest startup-recovery fixes. Build from source for those changes. A new stable installer has not been published.
+> **v1.3.0 is available as a preview installer.** It includes the scenes shown here, Windows 10 compatibility, and the latest startup-recovery fixes. Build, isolated installer checks and live Windows 11 recovery passed; full sign-in/cold-launch and clean Windows 10 installation remain pending. See the [release notes](https://github.com/mabyes1/codex-glass-themes/releases/tag/v1.3.0) before installing.
 
 ## Make it yours
 
@@ -40,12 +40,12 @@ You need the official **Windows x64 Codex package, `OpenAI.Codex`**, installed f
 
 | Version | Windows support |
 | --- | --- |
-| **Latest source** | Windows 10 22H2 / Windows 11, build 19045+. Builds below 22621 use an opaque renderer with simulated glass. |
-| **Published v1.2.0 installer** | Windows 11 x64, build 22621+. This older installer does not contain the Windows 10 fallback. |
+| **v1.3.0 preview / latest source** | Windows 10 22H2 / Windows 11, build 19045+. Builds below 22621 use an opaque renderer with simulated glass. |
+| **Older v1.2.0 installer** | Windows 11 x64, build 22621+. This older installer does not contain the Windows 10 fallback. |
 
 Windows 11 build 22621+ uses native background effects. On older supported builds, the compatibility mode softens the theme inside the window; it does not blur the desktop. ARM64 is not supported by this installer.
 
-1. [Download the published installer](https://github.com/mabyes1/codex-glass-themes/releases/tag/v1.2.0), or [build the latest source](packaging/README.md) for the features shown here.
+1. [Download the v1.3.0 preview installer](https://github.com/mabyes1/codex-glass-themes/releases/download/v1.3.0/ChatGPT-Glass-Themes-Setup-1.3.0-win-x64.exe), or [build from source](packaging/README.md).
 2. Run the installer under your normal Windows account. Click **「安裝並啟用」** — Install and enable. The default folder is `%USERPROFILE%\CodexGlass`.
 3. If Codex was already running during installation, finish your work and **fully quit it once**, then reopen it from its usual Start menu or taskbar icon.
 4. Click **「佈景」** — Theme — near the top of the window. Choose a mode and make it yours.
@@ -87,7 +87,7 @@ When [reporting a bug](https://github.com/mabyes1/codex-glass-themes/issues), in
 
 The October 19 source changes passed **31 Node tests**, real Chromium panel interactions under both appearance policies, a real scheduled-task recovery test, and isolated official-package activation with CDP/renderer checks. On the development PC, the existing Codex process was preserved and the native background returned to a working state. See the [verification boundaries](docs/startup-recovery.md#verification).
 
-**Still pending:** a complete post-fix sign-out/sign-in and normal cold-launch cycle, and a clean install/launch/uninstall on another Windows 10/11 computer. Browser tests use a stubbed native bridge and do not establish real Windows 10 behavior. The current source is a development snapshot.
+The v1.3.0 EXE also passed isolated installer extraction/deployment, native helper and package-path checks, conflict protection and removal checks. **Still pending:** a complete post-fix sign-out/sign-in and normal cold-launch cycle, and a clean install/launch/uninstall on another Windows 10/11 computer. Browser tests use a stubbed native bridge and do not establish real Windows 10 behavior. This release is marked as a preview.
 
 ## Under the glass
 

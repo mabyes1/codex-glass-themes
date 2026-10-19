@@ -10,6 +10,8 @@ $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 $runKey='Registry::HKEY_USERS\'+$sid+'\Software\Microsoft\Windows\CurrentVersion\Run'
 $runName='CodexGlassThemeAutoAttach'
 $beforeRun=(Get-ItemProperty -LiteralPath $runKey -Name $runName -ErrorAction SilentlyContinue).$runName
+$beforeTask=Get-ScheduledTask -TaskName ('CodexGlassThemeAutoAttach-'+$sid) -ErrorAction SilentlyContinue
+$beforeTaskXml=if($beforeTask){Export-ScheduledTask -TaskName $beforeTask.TaskName}else{$null}
 $beforeWatcher=$null
 if($beforeRun -and $beforeRun -match '-File\s+"([^"]+Start-Theme-Auto\.ps1)"'){
     $statusPath=Join-Path (Split-Path -Parent $Matches[1]) '.runtime-auto\package-hook-status.json'
@@ -19,6 +21,10 @@ if($beforeRun -and $beforeRun -match '-File\s+"([^"]+Start-Theme-Auto\.ps1)"'){
     }
 }
 $checks=[ordered]@{}
+if(!$beforeWatcher -and $beforeTask -and $beforeTask.Actions[0].Arguments -match '-File\s+"([^"]+Start-Theme-Auto\.ps1)"'){
+    $statusPath=Join-Path (Split-Path -Parent $Matches[1]) '.runtime-auto\package-hook-status.json'
+    if(Test-Path -LiteralPath $statusPath){$watcherStatus=Get-Content -LiteralPath $statusPath -Raw -Encoding UTF8|ConvertFrom-Json;$beforeWatcher=Get-CimInstance Win32_Process -Filter ('ProcessId='+$watcherStatus.workerPid)}
+}
 function Run-Installer([string]$name,[string]$arguments,[int]$expected=0){
     $stdout=Join-Path $reportRoot ($name+'.stdout.txt');$stderr=Join-Path $reportRoot ($name+'.stderr.txt')
     $info=[Diagnostics.ProcessStartInfo]::new($Installer,$arguments)
@@ -62,9 +68,9 @@ try {const stats=await watch.stats();if(!stats)throw Error('No native helper res
     $call[2]=[Text.StringBuilder]::new([int]$call[1])
     if($method.Invoke($null,$call) -ne 0 -or $call[2].ToString() -ne $package.InstallLocation){throw 'Actual official package path did not match'}
     $checks.dynamicPackagePathApi=$true
-    if($beforeRun){
+    if($beforeRun -or $beforeTask){
         $conflict=Run-Installer 'preserveOtherInstallation' ('--check-only --install-root "'+$testRoot+'"') 1
-        if($conflict -notmatch '另一套自動主題助手'){throw 'Conflict rejection was for an unexpected reason'}
+        if($conflict -notmatch '另一套自動主題助手|其他啟動除錯設定|登入排程|其他位置的主題安裝'){throw 'Conflict rejection was for an unexpected reason'}
     }else{
         Run-Installer 'environmentCheck' ('--check-only --install-root "'+$testRoot+'"')|Out-Null
     }
@@ -106,6 +112,7 @@ try {const stats=await watch.stats();if(!stats)throw Error('No native helper res
     $checks.uninstallUnlinksWithoutFollowing=$true
     $afterRun=(Get-ItemProperty -LiteralPath $runKey -Name $runName -ErrorAction SilentlyContinue).$runName
     if($afterRun -ne $beforeRun){throw 'The current login startup setting changed'}
+    if($beforeTask -and (Export-ScheduledTask -TaskName $beforeTask.TaskName) -ne $beforeTaskXml){throw 'The current login task changed'}
     if($beforeWatcher){
         $afterWatcher=Get-CimInstance Win32_Process -Filter ('ProcessId='+$beforeWatcher.ProcessId)
         if(!$afterWatcher -or $afterWatcher.CreationDate -ne $beforeWatcher.CreationDate){throw 'The current working watcher changed'}
