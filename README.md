@@ -2,6 +2,8 @@
 
 [English](README.md) · [繁體中文](README.zh-TW.md)
 
+> **Development snapshot (2026-10-19):** the latest source includes aquarium, Cosmos, and startup-state changes. Bugs are suspected and remain unconfirmed; this snapshot has not completed end-to-end acceptance and is not a new stable release. Published installer assets may differ from this source.
+
 Give Windows Codex a glass background, your own colors, and local image wallpapers. **Install once, then launch Codex from its usual Start menu or taskbar icon.** A background helper applies the theme automatically.
 
 **[Download the Windows x64 installer](https://github.com/mabyes1/codex-glass-themes/releases/latest)** · [Build from source](packaging/README.md)
@@ -10,7 +12,7 @@ This project targets **`ChatGPT.exe` inside the official `OpenAI.Codex` Windows 
 
 ## What you can customize
 
-- Clear glass, color gradients, a local background image, or a frosted aquarium.
+- Clear glass, color gradients, a local background image, a frosted aquarium, or animated cosmic skies.
 - Six color presets, with separate controls for the base color and two accents.
 - Background strength, blur, image shading, and reading comfort.
 - A control that keeps text and buttons opaque while the background is transparent.
@@ -22,11 +24,19 @@ Preferences persist in your existing Codex browser profile. Images are stored lo
 
 Choose **「水族館」** for a mysterious midnight-blue ocean behind the glass: silver arowanas, angelfish, a small school, a distant whale shark, and rising bubbles. **「水色濃度」** controls the water opacity independently of your other themes. **「暫停游動」** freezes the scene.
 
-The scene uses 14 softly lit fish and 20 bubbles, with a maximum of 18 frames per second and a canvas capped at 960 × 640 pixels. A softly blurred, AI-generated environment plate provides distant rocks and underwater light without being redrawn by the animation loop. The fish use AI-generated transparent atlases with ten species: silver arowana, angelfish, blue chromis, whale shark, clownfish, blue tang, copperband butterflyfish, betta, lionfish, and manta ray. Fourteen swimming slots are reused; fish change species after passing beyond the edge. This fantasy aquarium mixes freshwater and marine animals. Eight swimming poses per species are cached once, preserving natural proportions and fine fins. Each swimming fish takes one small image draw per frame. Animation stops when you switch themes, hide the window, pause it, or enable the system's reduced-motion preference.
+Choose from Deep Sea Glimmer, Blue Trench, Bioluminescent Abyss, and Shipwreck Sanctuary using the scene thumbnails. Scene selection and fish density are saved locally. The scene uses 60 softly lit fish (adjustable from 14 to 90) and 20 bubbles, with a maximum of 24 frames per second and a canvas capped at 1920 × 1280 pixels. A softly blurred, AI-generated environment plate provides distant rocks and underwater light without being redrawn by the animation loop. The fish use AI-generated transparent atlases with sixteen species: silver arowana, angelfish, blue chromis, whale shark, clownfish, blue tang, copperband butterflyfish, betta, lionfish, manta ray, hammerhead shark, moray eel, pufferfish, seahorse, mandarinfish, and anthias. Opaque fish bodies render in stable far-to-near order, with natural alpha on fine fins and edges. Adjustable swimming slots are reused; fish change species after passing beyond the edge. This fantasy aquarium mixes freshwater and marine animals. Twelve species-specific swimming poses are cached once, with body-to-tail waves, pectoral fin flex and gently varying forward pace, preserving natural proportions and fine fins. Each swimming fish takes one small image draw per frame. Animation stops when you switch themes, hide the window, pause it, or enable the system's reduced-motion preference.
 
 ![Deep-sea environment plate](packaging/payload/theme/assets/deep-sea.png)
 
-The background is softened in the app; moving fish are drawn separately. [Background prompt](docs/art/deep-sea-prompt.md) · [Original fish prompt](docs/art/fish-atlas-prompt.md) · [Reef expansion artwork and prompt](docs/art/fish-atlas-reef-prompt.md).
+The background is softened in the app; moving fish are drawn separately. [Background prompt](docs/art/deep-sea-prompt.md) · [Three new scenes and prompts](docs/art/deep-sea-expansion-prompt.md) · [Original fish prompt](docs/art/fish-atlas-prompt.md) · [Reef expansion artwork and prompt](docs/art/fish-atlas-reef-prompt.md) · [Six new species and prompt](docs/art/fish-atlas-exotic-prompt.md).
+
+## Cosmic skies
+
+Choose **「宇宙」** (Cosmos) for **銀河星海 / Milky Way**: twinkling stars and drifting dust over a generated galaxy, with a comet passing roughly every 26 seconds of active animation.
+
+**「夜色濃度」** controls this collection's opacity independently. **「暫停星空」** freezes the view. Cosmos uses one animation loop capped at 18 FPS and two raster canvases capped at 960 × 640 each (at most 4.69 MiB for those pixel buffers, excluding image decoding, browser/GPU overhead and other app memory). Switching away releases its canvas buffers and image reference. Animation stops on document hiding, manual pause, or the system's reduced-motion setting.
+
+Galaxy artwork and its [generation prompt](docs/art/milky-way-prompt.md) are included in the project. The scene is an atmospheric illustration.
 
 ## Requirements
 
@@ -46,7 +56,7 @@ Installation runs as the current user and does not request administrator elevati
 2. Download `ChatGPT-Glass-Themes-Setup-1.2.0-win-x64.exe` from [Releases](https://github.com/mabyes1/codex-glass-themes/releases/latest).
 3. Run it using your normal Windows account and click **「安裝並啟用」** (Install and enable). The default folder is `%USERPROFILE%\CodexGlass`.
 4. If Codex was already running, finish your work and **fully quit it once**, then reopen it from its usual icon. Closing a window may leave the app running in the background.
-5. Click **「佈景」** (Theme) near the top of the Codex window. Choose **「清透」** (Clear), **「配色」** (Colors), or **「圖片」** (Image), or **「水族館」** (Aquarium).
+5. Click **「佈景」** (Theme) near the top of the Codex window. Choose **「清透」** (Clear), **「配色」** (Colors), **「圖片」** (Image), **「水族館」** (Aquarium), or **「宇宙」** (Cosmos).
 
 ![Installer window showing the install folder and Install and enable button](docs/images/installer.png)
 

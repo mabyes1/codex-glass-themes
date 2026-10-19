@@ -6,6 +6,7 @@ $InstallRoot=[IO.Path]::GetFullPath($InstallRoot).TrimEnd('\')
 $marker=Join-Path $InstallRoot 'installation.json'
 $runKey='Registry::HKEY_USERS\'+$sid+'\Software\Microsoft\Windows\CurrentVersion\Run'
 $runName='CodexGlassThemeAutoAttach'
+$loginTaskName='CodexGlassThemeAutoAttach-'+$sid
 $uninstallKey='Registry::HKEY_USERS\'+$sid+'\Software\Microsoft\Windows\CurrentVersion\Uninstall\'+$product
 $shell=Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
 $startScript=Join-Path $InstallRoot 'Start-Theme-Auto.ps1'
@@ -13,7 +14,7 @@ $arguments='-NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPol
 $command='"'+$shell+'" '+$arguments
 $mutex=[Threading.Mutex]::new($false,'Local\CodexGlassSetup-'+$sid)
 if(!$mutex.WaitOne(0)){$mutex.Dispose();throw '另一個主題安裝程序正在執行。'}
-$activated=$false;$runChanged=$false;$installed=$false;$previousRun=$null;$touchedRoot=$false
+$activated=$false;$runChanged=$false;$installed=$false;$previousRun=$null;$touchedRoot=$false;$loginTaskChanged=$false;$previousLoginTaskXml=$null
 function Read-Json([string]$path){Get-Content -LiteralPath $path -Raw -Encoding UTF8|ConvertFrom-Json}
 function Write-Json([string]$path,$value){[IO.File]::WriteAllText($path,($value|ConvertTo-Json -Depth 6),[Text.UTF8Encoding]::new($false))}
 function Assert-OrdinaryPath([string]$path){
@@ -104,12 +105,16 @@ function Clear-OwnedHook {
     }
 }
 function Start-IndependentWatcher($package){
-    $taskName='CodexGlassTheme-Install-'+[guid]::NewGuid().ToString('N');$ready=$false;$registered=$false;$started=[DateTime]::UtcNow
+    $taskName=$loginTaskName;$ready=$false;$registered=$false;$started=[DateTime]::UtcNow
+    $existingTask=Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+    if($existingTask -and (@($existingTask.Actions).Count -ne 1 -or $existingTask.Actions[0].Execute -ne $shell -or $existingTask.Actions[0].Arguments -ne $arguments)){throw 'Login task belongs to another installation; it was preserved'}
+    if($existingTask){$script:previousLoginTaskXml=Export-ScheduledTask -TaskName $taskName}
     try{
         $action=New-ScheduledTaskAction -Execute $shell -Argument $arguments -WorkingDirectory $InstallRoot
         $principal=New-ScheduledTaskPrincipal -UserId $sid -LogonType Interactive -RunLevel Limited
-        $settings=New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-        Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Settings $settings|Out-Null;$registered=$true;Start-ScheduledTask -TaskName $taskName
+        $trigger=New-ScheduledTaskTrigger -AtLogOn -User $sid
+        $settings=New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+        Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Trigger $trigger -Settings $settings -Force|Out-Null;$registered=$true;$script:loginTaskChanged=$true;Start-ScheduledTask -TaskName $taskName
         $deadline=[DateTime]::UtcNow.AddSeconds(25)
         do{
             $statusPath=Join-Path $InstallRoot '.runtime-auto\package-hook-status.json'
@@ -122,7 +127,7 @@ function Start-IndependentWatcher($package){
         }while(!$ready -and [DateTime]::UtcNow -lt $deadline)
         if(!$ready){throw '主題助手未在期限內就緒；請查看安裝資料夾的 .runtime-auto\auto.log。'}
         $status
-    }finally{if($registered){Unregister-ScheduledTask -TaskName $taskName -Confirm:$false}}
+    }finally{if($registered -and !$ready -and !$existingTask){Unregister-ScheduledTask -TaskName $taskName -Confirm:$false}}
 }
 function Assert-RemovalTree([string]$directory){
     foreach($entry in @(Get-ChildItem -LiteralPath $directory -Force)){
@@ -158,6 +163,11 @@ try{
         if($existing -and !(Test-Path -LiteralPath $backup)){throw '登入設定備份遺失，已保留安裝檔案。'}
         if(Test-Path -LiteralPath $backup){$original=Read-Json $backup;if($original.command -ne $command){throw '登入設定備份不屬於此安裝，已保留。'}}
         Stop-OwnedHelpers;Clear-OwnedHook
+        $loginTask=Get-ScheduledTask -TaskName $loginTaskName -ErrorAction SilentlyContinue
+        if($loginTask){
+            if(@($loginTask.Actions).Count -ne 1 -or $loginTask.Actions[0].Execute -ne $shell -or $loginTask.Actions[0].Arguments -ne $arguments){throw 'Login task belongs to another installation; it was preserved'}
+            Unregister-ScheduledTask -TaskName $loginTaskName -Confirm:$false
+        }
         if(Test-Path -LiteralPath $backup){$original=Read-Json $backup;if($original.existed){New-ItemProperty -LiteralPath $runKey -Name $runName -Value $original.value -PropertyType String -Force|Out-Null}else{Remove-ItemProperty -LiteralPath $runKey -Name $runName -ErrorAction SilentlyContinue}}
         elseif($existing){throw '登入設定備份遺失，已保留安裝檔案。'}
         if(Test-Path -LiteralPath $uninstallKey){if((Get-ItemProperty -LiteralPath $uninstallKey).InstallLocation -ne $InstallRoot){throw '解除安裝紀錄屬於其他安裝，已保留。'};Remove-Item -LiteralPath $uninstallKey}
@@ -189,6 +199,7 @@ try{
     Write-Output '正在啟用登入自動啟動…'
     New-ItemProperty -LiteralPath $runKey -Name $runName -Value $command -PropertyType String -Force|Out-Null;$runChanged=$true
     $activated=$true;$status=Start-IndependentWatcher $package
+    Remove-ItemProperty -LiteralPath $runKey -Name $runName -ErrorAction SilentlyContinue
     New-Item -Path $uninstallKey -Force|Out-Null
     $uninstallCommand='"'+$shell+'" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "'+(Join-Path $InstallRoot 'Setup-Theme.ps1')+'" -Action Uninstall -InstallRoot "'+$InstallRoot+'"'
     @{DisplayName='ChatGPT Glass Themes（Codex）';DisplayVersion=$manifest.version;Publisher='Codex Glass Themes';InstallLocation=$InstallRoot;UninstallString=$uninstallCommand}|ForEach-Object {foreach($key in $_.Keys){New-ItemProperty -LiteralPath $uninstallKey -Name $key -Value $_[$key] -PropertyType String -Force|Out-Null}}
@@ -202,6 +213,7 @@ try{
     if($Action -eq 'Install' -and !$installed){
         $rollbackFailures=@()
         if($activated){try{Stop-OwnedHelpers;Clear-OwnedHook}catch{$rollbackFailures+=$_.Exception.Message}}
+        if($loginTaskChanged){try{if($previousLoginTaskXml){Register-ScheduledTask -TaskName $loginTaskName -Xml $previousLoginTaskXml -Force|Out-Null}else{Unregister-ScheduledTask -TaskName $loginTaskName -Confirm:$false -ErrorAction SilentlyContinue}}catch{$rollbackFailures+=$_.Exception.Message}}
         if($runChanged){try{if($previousRun){New-ItemProperty -LiteralPath $runKey -Name $runName -Value $previousRun.$runName -PropertyType String -Force|Out-Null}else{Remove-ItemProperty -LiteralPath $runKey -Name $runName -ErrorAction SilentlyContinue}}catch{$rollbackFailures+=$_.Exception.Message}}
         if($rollbackFailures.Count){$rollbackError=$rollbackFailures -join '; '}
         if($touchedRoot -and (Test-Path -LiteralPath $marker)){Write-Json $marker @{product=$product;version=$manifest.version;sid=$sid;root=$InstallRoot;mode='Failed';error=$failure;installedAt=(Get-Date).ToString('o')}}

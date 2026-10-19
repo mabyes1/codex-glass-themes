@@ -1,0 +1,9 @@
+# Fish species expansion
+
+Generated with the built-in image_gen tool on 2026-10-13. Adds hammerhead shark, moray eel, pufferfish, seahorse, mandarinfish, and anthias. The renderer normalizes near-opaque body alpha to full coverage and composites fish from far to near. Thin fins and edge alpha are retained.
+
+Asset: [fish-atlas-exotic.png](../../packaging/payload/theme/assets/fish-atlas-exotic.png)
+
+## Prompt
+
+Use case: stylized-concept. Asset type: transparent fish sprite atlas for a desktop animated aquarium. Create ONE precisely arranged 1536x1024 PNG sprite sheet with true transparent alpha background, 2 columns and 3 rows, six separate fish, one per cell. Every fish entirely contained inside its cell with 40px transparent margin, no overlaps or clipped fins. All fish face RIGHT in a clean side profile, swimming horizontally. Highly detailed painterly photorealistic marine-life illustration, naturally proportioned, sharp fine scales and fins, matches cinematic aquarium fish cutouts. Fish bodies must be completely opaque; thin fins may have natural translucency. No background, shadows, water, bubbles, glow halos, grid lines, labels, text or watermark. Exact cell subjects, reading left to right: top left a recognizable hammerhead shark, grey blue body and T-shaped hammerhead seen in slight three-quarter side profile; top right an elongated green moray eel with open small jaw and flowing dorsal fin; middle left a yellow spotted pufferfish inflated into a round body, fine small spines; middle right a bright orange sea horse with curled tail, upright natural pose facing right; bottom left a vivid green blue orange striped mandarinfish; bottom right a pink orange lyretail anthias with forked tail and lively fins. Keep subjects isolated and fully opaque inside, especially shark and eel. Transparent background is mandatory.

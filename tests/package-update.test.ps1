@@ -1,6 +1,6 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot '..\packaging\payload\Package-Theme-Hook.ps1')
-function Get-AppxPackage { param($Name) $script:installedPackages }
+function Get-CodexRegisteredPackages { $script:installedPackages }
 function Write-PackageThemeStatus { param($state,$message) $script:lastStatus=$state }
 function New-FakeSession($failure){
     $session=[pscustomobject]@{CleanupError=$failure;Disposed=$false}

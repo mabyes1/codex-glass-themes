@@ -30,7 +30,7 @@ h1 {font-size:20px;letter-spacing:.3px;line-height:1.4;margin:5px 0 3px;font-wei
 #close {display:grid;place-items:center;border:1px solid var(--panel-line);background:transparent;border-radius:9px;width:28px;height:28px;font-size:19px;line-height:1}
 .panel-body {overflow-y:auto;overscroll-behavior:contain;min-height:0;padding:0 20px 18px;scrollbar-width:thin;scrollbar-color:var(--panel-line) transparent}
 .choices,.reading-options {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;background:var(--kg-soft,#ffffff06);border:1px solid var(--panel-line);border-radius:12px}
-.choices {grid-template-columns:repeat(4,minmax(0,1fr))}
+.choices {grid-template-columns:repeat(5,minmax(0,1fr))}
 .choice,.reading-options button {display:flex;align-items:center;justify-content:center;gap:7px;border:1px solid transparent;border-radius:8px;padding:7px 5px;background:transparent;font-size:12px}
 .choice[aria-pressed=true],.reading-options button[aria-pressed=true] {background:var(--kg-selected,#ffffff20);border-color:var(--panel-line);box-shadow:0 2px 6px #0001}
 .choice:hover,.reading-options button:hover {background:var(--kg-hover,#ffffff14)}
@@ -39,7 +39,8 @@ h1 {font-size:20px;letter-spacing:.3px;line-height:1.4;margin:5px 0 3px;font-wei
 #swatch-color {background:linear-gradient(135deg,#6aabb3,#a283cc)}
 #swatch-image {background:linear-gradient(155deg,#a6b7bf 45%,#6f8b78 46%,#304541);background-size:cover;background-position:center}
 #swatch-aquarium {background:radial-gradient(ellipse at 35% 0%,#91c5e080,transparent 65%),linear-gradient(165deg,#17364f,#030b1b)}
-#aquarium-control {margin-top:16px;padding:15px;border:1px solid var(--panel-line);border-radius:12px;background:linear-gradient(145deg,#74b4da12,#030b1b40)}
+#swatch-cosmos {background:linear-gradient(140deg,#060b24 25%,#9282ac 48%,#162d50 64%,#020615)}
+#cosmos-control,#aquarium-control {margin-top:16px;padding:15px;border:1px solid var(--panel-line);border-radius:12px;background:linear-gradient(145deg,#74b4da12,#030b1b40)}
 .aquarium-title {display:flex;align-items:center;gap:12px}
 .aquarium-title>span {font-size:34px;line-height:1;color:#a2d6d0}
 .aquarium-title strong {font-size:12px;font-weight:600}
@@ -72,6 +73,13 @@ input[type=range] {display:block;width:100%;height:18px;accent-color:var(--kg-fo
 input[type=checkbox] {accent-color:var(--kg-focus,#abd1fc);width:15px;height:15px;cursor:pointer}
 .range-ends {display:flex;justify-content:space-between;color:var(--panel-quiet);font-size:10px;margin-top:2px}
 .note {font-size:11px;color:var(--panel-quiet);margin:8px 0 0;line-height:1.65}
+#ocean-gallery {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ocean-scene {padding:0;overflow:hidden;text-align:left;border:1px solid var(--panel-line);border-radius:10px;background:var(--kg-soft,#ffffff06)}
+.ocean-preview {display:block;height:62px;background-size:cover;background-position:center}
+.ocean-scene strong {display:block;padding:6px 9px;font-size:11px;font-weight:600}
+.ocean-scene:hover,.ocean-scene[aria-pressed=true] {border-color:var(--kg-focus,#abd1fc)}
+.ocean-scene[aria-pressed=true] {box-shadow:0 0 0 1px var(--kg-focus,#abd1fc)}
+.fish-density {margin-top:9px}
 details {margin-top:14px;border:1px solid var(--panel-line);border-radius:10px;padding:10px 12px}
 summary {cursor:pointer;font-size:12px;color:var(--kg-secondary,#e1e4e9)}
 details[open] summary {margin-bottom:12px}

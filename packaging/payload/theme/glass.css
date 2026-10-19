@@ -56,7 +56,9 @@ html[data-ken-glass] {
   --color-token-text-tertiary:var(--kg-muted)!important;
   --color-token-text-link-foreground:var(--kg-link)!important;
   --link-primary-text-color:var(--kg-link)!important;
-  --color-text-composer-primary:var(--kg-primary)!important;
+  /* Solid composer actions need inverse ink against their primary background. */
+  --color-background-composer-primary:var(--kg-solid)!important;
+  --color-text-composer-primary:var(--kg-inverse)!important;
   --color-text-user-message:var(--kg-primary)!important;
   --user-message-text-color:var(--kg-primary)!important;
   --color-background-user-message:var(--kg-bubble)!important;
@@ -106,7 +108,8 @@ html[data-ken-glass] body::before,html[data-ken-glass] body::after {display:none
 html[data-ken-glass] #ken-glass-background {
   position:fixed;inset:0;z-index:-1;pointer-events:none;
 }
-html[data-ken-glass='aquarium'] #ken-glass-background {overflow:hidden;}
+html[data-ken-glass='aquarium'] #ken-glass-background,
+html[data-ken-glass='cosmos'] #ken-glass-background {overflow:hidden;}
 /* The outer app surface must not add a second tinted full-window layer. */
 html[data-ken-glass] main.bg-surface {background:transparent!important;}
 html[data-ken-glass] [data-app-shell-main-surface],
@@ -174,7 +177,7 @@ html[data-ken-glass] [data-composer-surface-variant] {
   --color-text-primary:var(--kg-primary)!important;
   --color-text-secondary:var(--kg-secondary)!important;
   --color-text-tertiary:var(--kg-muted)!important;
-  --color-text-composer-primary:var(--kg-primary)!important;
+  --color-text-composer-primary:var(--kg-inverse)!important;
   color:var(--kg-primary)!important;
   background:var(--kg-composer)!important;
   backdrop-filter:none!important;

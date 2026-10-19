@@ -9,8 +9,14 @@ let themeSource=null;
 if(themeRoot&&!inspectTheme){
   const {createGlassAppearance}=await import(pathToFileURL(join(themeRoot,'glass-design.mjs')));
   const {glassPresets}=await import(pathToFileURL(join(themeRoot,'glass-presets.mjs')));
+  const {createAquariumLayer}=await import(pathToFileURL(join(themeRoot,'aquarium.mjs')));
+  const {createCosmosLayer}=await import(pathToFileURL(join(themeRoot,'cosmos.mjs')));
   const [css,panelCss,panel]=await Promise.all(['glass.css','theme-panel.css','theme-panel.js'].map(name=>readFile(join(themeRoot,name),'utf8')));
-  themeSource=panel.replace('CSS_PLACEHOLDER',()=>JSON.stringify(css)).replace('APPEARANCE_PLACEHOLDER',()=>createGlassAppearance.toString()).replace('PRESETS_PLACEHOLDER',()=>JSON.stringify(glassPresets)).replace('PANEL_CSS_PLACEHOLDER',()=>JSON.stringify(panelCss));
+  const asset=async name=>'data:image/png;base64,'+(await readFile(join(themeRoot,'assets',name))).toString('base64');
+  const [ocean,fish,reef,galaxy]=await Promise.all(['deep-sea.png','fish-atlas.png','fish-atlas-reef.png','milky-way.png'].map(asset));
+  themeSource=panel.replace('CSS_PLACEHOLDER',()=>JSON.stringify(css)).replace('APPEARANCE_PLACEHOLDER',()=>createGlassAppearance.toString()).replace('PRESETS_PLACEHOLDER',()=>JSON.stringify(glassPresets)).replace('PANEL_CSS_PLACEHOLDER',()=>JSON.stringify(panelCss))
+    .replace('AQUARIUM_PLACEHOLDER',()=>createAquariumLayer.toString()).replace('AQUARIUM_IMAGE_PLACEHOLDER',()=>JSON.stringify(ocean)).replace('FISH_ATLAS_PLACEHOLDER',()=>JSON.stringify(fish)).replace('REEF_ATLAS_PLACEHOLDER',()=>JSON.stringify(reef))
+    .replace('COSMOS_PLACEHOLDER',()=>createCosmosLayer.toString()).replace('GALAXY_IMAGE_PLACEHOLDER',()=>JSON.stringify(galaxy));
 }
 let port,path;
 if(/^port:\d+$/.test(profile)){

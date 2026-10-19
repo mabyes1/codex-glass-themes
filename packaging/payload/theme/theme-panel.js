@@ -1,5 +1,5 @@
 // Runs only in the Codex main renderer. Images stay in local IndexedDB.
-(function installGlass(css, appearanceFor, presets, panelCss, createAquarium, aquariumImage, fishAtlas, reefAtlas) {
+(function installGlass(css, appearanceFor, presets, panelCss, createAquarium, aquariumImage, fishAtlas, reefAtlas, createCosmos, galaxyImage, exoticAtlas) {
   window.__kenGlassPanel?.dispose(false);
   for (const id of ['ken-desktop-test', 'ken-glass-foreground', 'ken-glass-background', 'ken-glass-switcher']) {
     document.getElementById(id)?.remove();
@@ -10,14 +10,20 @@
   const firstColors = {base:'#111d30', left:'#3b91b3', right:'#7e55a7'};
   let saved;
   try { saved = JSON.parse(localStorage.getItem(key) || '{}'); } catch { saved = {}; }
-  const prefs = {mode:'clear', opacity:82, keepForeground:true, backgroundOpacity:45, backgroundBlur:false, imageShade:28, surfaceStrength:50, aquariumMotion:true, aquariumOpacity:85, ...saved};
+  const prefs = {mode:'clear', opacity:82, keepForeground:true, backgroundOpacity:45, backgroundBlur:false, imageShade:28, surfaceStrength:50, aquariumMotion:true, aquariumOpacity:85, cosmosMotion:true, cosmosOpacity:90, ...saved};
   prefs.mode = {desktop:'clear', silver:'clear', blue:'color'}[prefs.mode] || prefs.mode;
-  if (!['clear', 'color', 'image', 'aquarium', 'original'].includes(prefs.mode)) prefs.mode = 'clear';
+  if (!['clear', 'color', 'image', 'aquarium', 'cosmos', 'original'].includes(prefs.mode)) prefs.mode = 'clear';
   prefs.aquariumMotion = prefs.aquariumMotion !== false;
+  const oceanScenes=Array.isArray(aquariumImage)?aquariumImage:[{id:'original',name:'深海微光',description:'冷光與銀影，安靜的深藍。',url:aquariumImage}];
+  prefs.aquariumScene=oceanScenes.some(scene=>scene.id===prefs.aquariumScene)?prefs.aquariumScene:'original';
+  prefs.cosmosMotion = prefs.cosmosMotion !== false;
+  delete prefs.cosmosScene;
   const number = (value, min, max, fallback) => Number.isFinite(Number(value)) ? Math.max(min, Math.min(max, Number(value))) : fallback;
   prefs.opacity = number(prefs.opacity, 55, 100, 82);
   prefs.backgroundOpacity = number(prefs.backgroundOpacity, 0, 100, 45);
   prefs.aquariumOpacity = number(prefs.aquariumOpacity, 0, 100, 85);
+  prefs.aquariumFishCount = Math.round(number(prefs.aquariumFishCount, 14, 90, 60));
+  prefs.cosmosOpacity = number(prefs.cosmosOpacity, 0, 100, 90);
   prefs.imageShade = number(prefs.imageShade, 0, 65, 28);
   prefs.surfaceStrength = number(prefs.surfaceStrength, 0, 100, 50);
   prefs.keepForeground = prefs.keepForeground === true;
@@ -32,7 +38,10 @@
   const background = document.createElement('div');
   background.id = 'ken-glass-background'; background.setAttribute('aria-hidden', 'true');
   document.body.prepend(background);
-  const aquarium = createAquarium(background, aquariumImage, fishAtlas, reefAtlas);
+  const oceanScene=()=>oceanScenes.find(scene=>scene.id===prefs.aquariumScene)||oceanScenes[0];
+  const aquarium = createAquarium(background, oceanScene().url, fishAtlas, reefAtlas, exoticAtlas);
+  const cosmos = createCosmos(background, galaxyImage);
+  const animatedMode = () => prefs.mode === 'aquarium' || prefs.mode === 'cosmos';
   const host = document.createElement('div'); host.id = 'ken-glass-switcher';
   host.style.cssText = 'position:fixed;top:8px;right:160px;z-index:2147483000;-webkit-app-region:no-drag;';
   const shadow = host.attachShadow({mode:'open'});
@@ -47,6 +56,7 @@
         <button class="choice" data-mode="color"><span class="swatch" id="swatch-color" aria-hidden="true"></span>配色</button>
         <button class="choice" data-mode="image"><span class="swatch" id="swatch-image" aria-hidden="true"></span>圖片</button>
         <button class="choice" data-mode="aquarium"><span class="swatch" id="swatch-aquarium" aria-hidden="true"></span>水族館</button>
+        <button class="choice" data-mode="cosmos"><span class="swatch" id="swatch-cosmos" aria-hidden="true"></span>宇宙</button>
       </div>
       <div id="gallery-control">
         <div class="section-heading"><strong>精選佈景</strong><span>點選縮圖，立即套用</span></div>
@@ -63,9 +73,20 @@
         <p class="note">圖片保存在本機。PNG、JPG、WebP、AVIF，最大 12 MB。</p>
       </div>
       <div id="aquarium-control" hidden>
-        <div class="aquarium-title"><span aria-hidden="true">◌</span><div><strong>深海微光</strong><p class="note">一束冷光，幾尾銀影，游進安靜的深藍。</p></div></div>
+        <div class="section-heading"><strong>海底風景</strong><span>點選換一片海</span></div>
+        <div id="ocean-gallery" role="group" aria-label="深海背景"></div>
+        <p class="note" id="ocean-description"></p>
+        <p class="note">16 種魚魚：鯨鯊、魟魚、雙髻鯊、海鰻、河豚、海馬、麒麟魚、花鱸，還有小丑魚等熟面孔。</p>
+        <label class="range-label" for="fish-count">魚魚數量<output id="fish-count-value"></output></label>
+        <input id="fish-count" type="range" min="14" max="90" step="1">
+        <div class="reading-options fish-density" role="group" aria-label="魚群密度"><button data-fish-count="24">悠游 · 24</button><button data-fish-count="60">熱鬧 · 60</button><button data-fish-count="90">滿滿魚魚 · 90</button></div>
         <label class="range-label" for="aquarium-pause">暫停游動<input id="aquarium-pause" type="checkbox"></label>
         <p class="note">休息時留下靜態魚影。也會配合系統的減少動態效果設定。</p>
+      </div>
+      <div id="cosmos-control" hidden>
+        <div class="aquarium-title"><span aria-hidden="true">✧</span><div><strong>銀河星海</strong><p class="note">銀河在遠方延伸，彗星偶爾劃過寂靜。</p></div></div>
+        <label class="range-label" for="cosmos-pause">暫停星空<input id="cosmos-pause" type="checkbox"></label>
+        <p class="note">暫停時保留眼前的風景，也會配合系統的減少動態效果設定。</p>
       </div>
       <div class="control" id="desktop-control">
         <div class="section-heading" style="margin-top:0"><strong>閱讀舒適度</strong><span>各佈景共用</span></div>
@@ -87,6 +108,15 @@
   </section>`;
   document.body.append(host);
   const $ = id => shadow.getElementById(id);
+  for(const scene of oceanScenes){
+    const button=document.createElement('button');button.className='ocean-scene';button.dataset.oceanScene=scene.id;
+    button.setAttribute('aria-label',scene.name);
+    const preview=document.createElement('span');preview.className='ocean-preview';preview.setAttribute('aria-hidden','true');
+    preview.style.backgroundImage=`url(${JSON.stringify(scene.url)})`;
+    const name=document.createElement('strong');name.textContent=scene.name;
+    button.append(preview,name);button.onclick=()=>{prefs.aquariumScene=scene.id;apply(false);};
+    $('ocean-gallery').append(button);
+  }
   for (const preset of presets) {
     const appearance = appearanceFor({...prefs,mode:'color',colors:preset.colors,surfaceStrength:50});
     const button = document.createElement('button');
@@ -103,18 +133,18 @@
   }
   const selectedPreset = () => presets.find(p => Object.keys(firstColors).every(k => p.colors[k].toLowerCase() === prefs.colors[k].toLowerCase()));
   const save = () => { try { localStorage.setItem(key, JSON.stringify(prefs)); } catch { $('status').textContent = '目前可用，但無法儲存偏好。'; } };
-  const backgroundStrength = () => prefs.mode === 'aquarium' ? prefs.aquariumOpacity : prefs.backgroundOpacity;
+  const backgroundStrength = () => prefs.mode === 'cosmos' ? prefs.cosmosOpacity : prefs.mode === 'aquarium' ? prefs.aquariumOpacity : prefs.backgroundOpacity;
   function restoreTheme() {
     root.removeAttribute('data-ken-glass');
     const t = window.__kenGlassOriginalTheme;
     t === null ? root.removeAttribute('data-theme') : root.setAttribute('data-theme', t);
   }
   function status() {
-    $('status').textContent = prefs.mode === 'aquarium' ? `已自動儲存 · 毛玻璃水族館 · ${aquarium.getDiagnostics().running ? '魚兒悠游中' : '靜靜看海'}` : prefs.mode === 'original' ? '已還原原始外觀' :
+    $('status').textContent = prefs.mode === 'cosmos' ? `已自動儲存 · 銀河星海 · ${cosmos.getDiagnostics().running ? '星空流動中' : '靜靜看星空'}` : prefs.mode === 'aquarium' ? `已自動儲存 · ${oceanScene().name} · ${prefs.aquariumFishCount} 隻魚 · ${aquarium.getDiagnostics().running ? '悠游中' : '靜靜看海'}` : prefs.mode === 'original' ? '已還原原始外觀' :
       prefs.keepForeground ? `已自動儲存 · 背景 ${prefs.backgroundOpacity}% · ${prefs.backgroundBlur ? '毛玻璃' : '清透玻璃'}` : `已自動儲存 · 視窗不透明度 ${prefs.opacity}%`;
   }
   function native(force = false) {
-    const value = {mode:prefs.mode === 'original' ? 'restore' : prefs.keepForeground ? 'background' : prefs.opacity === 100 ? 'restore' : 'set', opacity:prefs.keepForeground ? 100 : prefs.opacity, blur:prefs.mode === 'aquarium' || prefs.backgroundBlur};
+    const value = {mode:prefs.mode === 'original' ? 'restore' : prefs.keepForeground ? 'background' : prefs.opacity === 100 ? 'restore' : 'set', opacity:prefs.keepForeground ? 100 : prefs.opacity, blur:animatedMode() || prefs.backgroundBlur};
     const signature = JSON.stringify(value);
     if (!force && signature === nativeSignature) { if (!nativeFailed) status(); return; }
     if (typeof window.__kenGlassNative !== 'function') { $('status').textContent = '透明度助手未連線，請確認背景助手正在執行。'; return; }
@@ -147,23 +177,32 @@
     const preset = mode === 'color' ? selectedPreset() : null;
     shadow.querySelectorAll('[data-preset]').forEach(b => b.setAttribute('aria-pressed',String(b.dataset.preset === preset?.id)));
     shadow.querySelectorAll('[data-reading]').forEach(b => b.setAttribute('aria-pressed',String(Number(b.dataset.reading) === prefs.surfaceStrength)));
+    aquarium.setBackdrop(oceanScene().url,oceanScene().id);
+    aquarium.setFishCount(prefs.aquariumFishCount);
     aquarium.setActive(mode === 'aquarium' && (!prefs.keepForeground || backgroundStrength() > 0),prefs.aquariumMotion);
-    $('active-name').textContent = mode === 'aquarium' ? '深海微光 · 毛玻璃水族館' : mode === 'color' ? `${preset?.name || '我的配色'} · ${expectedTheme === 'light' ? '明亮' : '深色'}玻璃` : mode === 'image' ? '圖片玻璃 · 讓喜歡的風景陪你工作' : mode === 'original' ? 'Codex 原始外觀' : '清透玻璃 · 留一點空間給桌面風景';
-    $('toggle-dot').style.background = mode === 'color' || mode === 'aquarium' ? appearanceFor(prefs).background : mode === 'image' && imageURL ? `url(${JSON.stringify(imageURL)}) center/cover` : 'linear-gradient(135deg,#b5bdc9,#687686)';
+    cosmos.setActive(mode === 'cosmos' && (!prefs.keepForeground || backgroundStrength() > 0),prefs.cosmosMotion);
+    $('active-name').textContent = mode === 'cosmos' ? `銀河星海 · 玻璃後的宇宙` : mode === 'aquarium' ? `${oceanScene().name} · ${prefs.aquariumFishCount} 隻魚陪你工作` : mode === 'color' ? `${preset?.name || '我的配色'} · ${expectedTheme === 'light' ? '明亮' : '深色'}玻璃` : mode === 'image' ? '圖片玻璃 · 讓喜歡的風景陪你工作' : mode === 'original' ? 'Codex 原始外觀' : '清透玻璃 · 留一點空間給桌面風景';
+    $('toggle-dot').style.background = mode === 'color' || animatedMode() ? appearanceFor(prefs).background : mode === 'image' && imageURL ? `url(${JSON.stringify(imageURL)}) center/cover` : 'linear-gradient(135deg,#b5bdc9,#687686)';
     $('toggle').title = $('active-name').textContent;
-    $('gallery-control').hidden = mode === 'image' || mode === 'aquarium';
+    $('gallery-control').hidden = mode === 'image' || animatedMode();
     $('aquarium-control').hidden = mode !== 'aquarium';
+    shadow.querySelectorAll('[data-ocean-scene]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.oceanScene===prefs.aquariumScene)));
+    shadow.querySelectorAll('[data-fish-count]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.fishCount)===prefs.aquariumFishCount)));
+    $('ocean-description').textContent=oceanScene().description;
+    $('fish-count').value=prefs.aquariumFishCount;$('fish-count-value').textContent=prefs.aquariumFishCount+' 隻';
     $('aquarium-pause').checked = !prefs.aquariumMotion;
+    $('cosmos-control').hidden = mode !== 'cosmos';
+    $('cosmos-pause').checked = !prefs.cosmosMotion;
     $('desktop-control').hidden = mode === 'original';
     $('palette-control').hidden = mode !== 'color'; $('image-control').hidden = mode !== 'image';
     for (const k of Object.keys(firstColors)) $('color-' + k).value = prefs.colors[k];
-    $('keep-foreground').checked = prefs.keepForeground; $('background-blur').checked = mode === 'aquarium' || prefs.backgroundBlur;
-    $('background-blur').disabled = mode === 'aquarium';
+    $('keep-foreground').checked = prefs.keepForeground; $('background-blur').checked = animatedMode() || prefs.backgroundBlur;
+    $('background-blur').disabled = animatedMode();
     $('blur-control').hidden = !prefs.keepForeground;
     $('opacity').min = prefs.keepForeground ? '0' : '55';
     $('opacity').value = prefs.keepForeground ? backgroundStrength() : prefs.opacity;
     $('opacity-value').textContent = $('opacity').value + '%';
-    $('opacity-label').textContent = prefs.keepForeground ? mode === 'aquarium' ? '水色濃度' : '背景濃度' : '視窗不透明度';
+    $('opacity-label').textContent = prefs.keepForeground ? mode === 'cosmos' ? '夜色濃度' : mode === 'aquarium' ? '水色濃度' : '背景濃度' : '視窗不透明度';
     $('opacity-low').textContent = prefs.keepForeground ? '更清透' : '更透明';
     $('opacity-note').textContent = prefs.keepForeground ? '調整背景的濃淡，文字與按鈕維持清晰。' : '整個視窗一起變透明，包含文字與按鈕。';
     $('image-name').textContent = imageURL ? (typeof prefs.imageName === 'string' ? prefs.imageName : '已儲存的背景圖片') : '選一張喜歡的照片，讓它陪你工作。';
@@ -186,8 +225,11 @@
   shadow.querySelectorAll('[data-reading]').forEach(b => b.onclick = () => { prefs.surfaceStrength = Number(b.dataset.reading); apply(false); });
   $('original').onclick = () => { prefs.mode = 'original'; apply(); };
   $('aquarium-pause').onchange = () => { prefs.aquariumMotion = !$('aquarium-pause').checked; apply(false); };
+  $('fish-count').oninput=()=>{prefs.aquariumFishCount=Number($('fish-count').value);apply(false);};
+  shadow.querySelectorAll('[data-fish-count]').forEach(b=>b.onclick=()=>{prefs.aquariumFishCount=Number(b.dataset.fishCount);apply(false);});
+  $('cosmos-pause').onchange = () => { prefs.cosmosMotion = !$('cosmos-pause').checked; apply(false); };
   $('opacity').oninput = () => {
-    prefs[prefs.keepForeground ? prefs.mode === 'aquarium' ? 'aquariumOpacity' : 'backgroundOpacity' : 'opacity'] = Number($('opacity').value);
+    prefs[prefs.keepForeground ? prefs.mode === 'cosmos' ? 'cosmosOpacity' : prefs.mode === 'aquarium' ? 'aquariumOpacity' : 'backgroundOpacity' : 'opacity'] = Number($('opacity').value);
     if (prefs.keepForeground) apply(false); else $('opacity-value').textContent = $('opacity').value + '%';
   };
   $('opacity').onchange = () => { apply(); };
@@ -275,11 +317,11 @@
   };
   window.__kenGlassPanel = {
     getState:() => ({...prefs, colors:{...prefs.colors}, hasImage:!!imageURL}),
-    getDiagnostics:() => ({themeRepairs,backdropRepairs,expectedTheme,nativeFailed,nativePending,aquarium:aquarium.getDiagnostics()}),
+    getDiagnostics:() => ({themeRepairs,backdropRepairs,expectedTheme,nativeFailed,nativePending,aquarium:aquarium.getDiagnostics(),cosmos:cosmos.getDiagnostics()}),
     importFile,
     open:() => open(true),
     dispose(restore = true) {
-      disposed = true; aquarium.dispose(); themeGuard.disconnect(); titleGuard.disconnect(); unsubscribeSystemTheme?.();
+      disposed = true; aquarium.dispose(); cosmos.dispose(); themeGuard.disconnect(); titleGuard.disconnect(); unsubscribeSystemTheme?.();
       window.removeEventListener('message',backdropChanged);
       window.removeEventListener('focus',activated); document.removeEventListener('visibilitychange',visible);
       document.removeEventListener('pointerdown',outside); document.removeEventListener('keydown',escape,true);
@@ -296,4 +338,4 @@
     imageURL = url; $('swatch-image').style.backgroundImage = `url(${JSON.stringify(imageURL)})`;
     if (prefs.mode === 'image') apply(false);
   }).catch(() => { if (!disposed && prefs.mode === 'image') $('status').textContent = '無法讀取已儲存的圖片，請重新選擇。'; });
-})(CSS_PLACEHOLDER, APPEARANCE_PLACEHOLDER, PRESETS_PLACEHOLDER, PANEL_CSS_PLACEHOLDER, AQUARIUM_PLACEHOLDER, AQUARIUM_IMAGE_PLACEHOLDER, FISH_ATLAS_PLACEHOLDER, REEF_ATLAS_PLACEHOLDER);
+})(CSS_PLACEHOLDER, APPEARANCE_PLACEHOLDER, PRESETS_PLACEHOLDER, PANEL_CSS_PLACEHOLDER, AQUARIUM_PLACEHOLDER, AQUARIUM_IMAGE_PLACEHOLDER, FISH_ATLAS_PLACEHOLDER, REEF_ATLAS_PLACEHOLDER, COSMOS_PLACEHOLDER, GALAXY_IMAGE_PLACEHOLDER, EXOTIC_ATLAS_PLACEHOLDER);

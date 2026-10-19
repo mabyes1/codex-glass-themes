@@ -20,7 +20,6 @@ internal static class PackageStartupDebugger {
     [DllImport("kernel32.dll",SetLastError=true)] static extern bool GetProcessTimes(IntPtr process,out long creation,out long exit,out long kernel,out long user);
     [DllImport("kernel32.dll",SetLastError=true)] static extern bool GetThreadTimes(IntPtr thread,out long creation,out long exit,out long kernel,out long user);
     [DllImport("kernel32.dll",CharSet=CharSet.Unicode)] static extern int GetPackageFullName(IntPtr process,ref uint length,StringBuilder name);
-    [DllImport("kernel32.dll",CharSet=CharSet.Unicode)] static extern int GetPackagePathByFullName(string package,ref uint length,StringBuilder path);
     [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern bool QueryFullProcessImageName(IntPtr process,uint flags,StringBuilder image,ref uint length);
     [DllImport("advapi32.dll",SetLastError=true)] static extern bool OpenProcessToken(IntPtr process,uint access,out IntPtr token);
     static uint Argument(string[] args,string key) {
@@ -39,6 +38,8 @@ internal static class PackageStartupDebugger {
         string log=null;bool canResume=false;
         var serializer=new JavaScriptSerializer();
         var result=new Dictionary<string,object>{{"pid",0},{"tid",0},{"patched",false},{"resumed",false},{"error",null}};
+        result["at"]=DateTimeOffset.UtcNow.ToString("o");
+        var callbackClock=Stopwatch.StartNew();
         try {
             uint pid=Argument(args,"-p"),tid=Argument(args,"-tid");result["pid"]=pid;result["tid"]=tid;
             process=OpenProcess(0x1038,false,pid);
@@ -50,16 +51,12 @@ internal static class PackageStartupDebugger {
             long helperStarted=Process.GetCurrentProcess().StartTime.ToUniversalTime().ToFileTimeUtc();
             if(creation<helperStarted-TimeSpan.FromSeconds(30).Ticks||creation>helperStarted)throw new Exception("Process predates this activation callback");
             string package=PackageName(process);
+            result["package"]=package;
+            result["mainCreatedUtc"]=DateTime.FromFileTimeUtc(creation).ToString("o");
             if(!Regex.IsMatch(package,@"^OpenAI\.Codex_[0-9.]+_x64__2p2nqsd0c76g0$"))throw new Exception("Process is not an official Codex package");
             var actualImage=new StringBuilder(32768);uint imageLength=(uint)actualImage.Capacity;
             if(!QueryFullProcessImageName(process,0,actualImage,ref imageLength))throw new Win32Exception(Marshal.GetLastWin32Error());
-            uint packagePathLength=0;
-            int packagePathError=GetPackagePathByFullName(package,ref packagePathLength,null);
-            if(packagePathError!=122||packagePathLength<2||packagePathLength>32768)throw new Exception("Official package path is unavailable");
-            var packagePath=new StringBuilder((int)packagePathLength);
-            packagePathError=GetPackagePathByFullName(package,ref packagePathLength,packagePath);
-            if(packagePathError!=0)throw new Win32Exception(packagePathError);
-            string officialRoot=Path.Combine(packagePath.ToString(),"app");
+            string officialRoot=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),"WindowsApps",package,"app");
             if(!String.Equals(actualImage.ToString(),Path.Combine(officialRoot,"ChatGPT.exe"),StringComparison.OrdinalIgnoreCase)&&!String.Equals(actualImage.ToString(),Path.Combine(officialRoot,"resources","codex-command-runner.exe"),StringComparison.OrdinalIgnoreCase))throw new Exception("Process image is not an official activation entry");
             string sid=WindowsIdentity.GetCurrent().User.Value;
             IntPtr token;
@@ -83,6 +80,7 @@ internal static class PackageStartupDebugger {
             long expires=Convert.ToInt64(config["expires"]);
             if(creation<Convert.ToInt64(config["notBefore"])||(expires>0&&now>expires))throw new Exception("Argument modification window has expired; native activation will resume");
             string command=StartupArguments.ReadCommandLine(process,(string)config["image"]);
+            result["argumentPresentBefore"]=command.IndexOf("--remote-debugging-port",StringComparison.OrdinalIgnoreCase)>=0;
             if(Regex.IsMatch(command,@"(^|\s)--type="))throw new Exception("Child process will resume without argument modification");
             string mode=config.ContainsKey("mode")?(string)config["mode"]:"isolated";
             if(mode=="isolated"){
@@ -106,6 +104,7 @@ internal static class PackageStartupDebugger {
             }
             if(thread!=IntPtr.Zero)StartupArguments.CloseHandle(thread);
             if(process!=IntPtr.Zero)StartupArguments.CloseHandle(process);
+            result["elapsedMs"]=callbackClock.Elapsed.TotalMilliseconds;
             if(log!=null){try{if(File.Exists(log)&&new FileInfo(log).Length>1048576)File.WriteAllText(log,"");File.AppendAllText(log,serializer.Serialize(result)+Environment.NewLine);}catch{}}
         }
         return (bool)result["resumed"]?0:1;

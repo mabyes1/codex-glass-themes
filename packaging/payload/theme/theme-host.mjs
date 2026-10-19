@@ -6,6 +6,8 @@ import {promisify} from 'node:util';
 import {createGlassAppearance} from './glass-design.mjs';
 import {glassPresets} from './glass-presets.mjs';
 import {createAquariumLayer} from './aquarium.mjs';
+import {aquariumBackdrops} from './aquarium-backdrops.mjs';
+import {createCosmosLayer} from './cosmos.mjs';
 import {startBackdropWatch} from './native-watch.mjs';
 const exec=promisify(execFile),dir=dirname(fileURLToPath(import.meta.url)),runtime=join(dir,'.runtime');
 await mkdir(runtime,{recursive:true});
@@ -13,9 +15,11 @@ const stopFile=join(runtime,'stop'),pidFile=join(runtime,'host.pid');
 await unlink(stopFile).catch(()=>{});await writeFile(pidFile,String(process.pid));
 const css=await readFile(join(dir,'glass.css'),'utf8');
 const panelCss=await readFile(join(dir,'theme-panel.css'),'utf8');
-const aquariumImage='data:image/png;base64,'+(await readFile(join(dir,'assets/deep-sea.png'))).toString('base64');
+const aquariumImage=await Promise.all(aquariumBackdrops.map(async scene=>({...scene,url:'data:image/png;base64,'+(await readFile(join(dir,'assets',scene.file))).toString('base64')})));
 const fishAtlas='data:image/png;base64,'+(await readFile(join(dir,'assets/fish-atlas.png'))).toString('base64');
 const reefAtlas='data:image/png;base64,'+(await readFile(join(dir,'assets/fish-atlas-reef.png'))).toString('base64');
+const exoticAtlas='data:image/png;base64,'+(await readFile(join(dir,'assets/fish-atlas-exotic.png'))).toString('base64');
+const galaxyImage='data:image/png;base64,'+(await readFile(join(dir,'assets/milky-way.png'))).toString('base64');
 const source=(await readFile(join(dir,'theme-panel.js'),'utf8'))
  .replace('CSS_PLACEHOLDER',()=>JSON.stringify(css))
  .replace('APPEARANCE_PLACEHOLDER',()=>createGlassAppearance.toString())
@@ -24,7 +28,10 @@ const source=(await readFile(join(dir,'theme-panel.js'),'utf8'))
  .replace('AQUARIUM_PLACEHOLDER',()=>createAquariumLayer.toString())
  .replace('AQUARIUM_IMAGE_PLACEHOLDER',()=>JSON.stringify(aquariumImage))
  .replace('FISH_ATLAS_PLACEHOLDER',()=>JSON.stringify(fishAtlas))
- .replace('REEF_ATLAS_PLACEHOLDER',()=>JSON.stringify(reefAtlas));
+ .replace('REEF_ATLAS_PLACEHOLDER',()=>JSON.stringify(reefAtlas))
+ .replace('EXOTIC_ATLAS_PLACEHOLDER',()=>JSON.stringify(exoticAtlas))
+ .replace('COSMOS_PLACEHOLDER',()=>createCosmosLayer.toString())
+ .replace('GALAXY_IMAGE_PLACEHOLDER',()=>JSON.stringify(galaxyImage));
 let socket=null,seq=0,pending=new Map(),nativeQueue=Promise.resolve(),nativeRevision=0,stopping=false,scriptId=null;
 let backdropWatch=null,nativeWanted=null;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
