@@ -3,6 +3,8 @@ import http from 'node:http';
 import {randomBytes} from 'node:crypto';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {inspectThemeHealth} from './Theme-Health.mjs';
+const themeExpression=`(${inspectThemeHealth.toString()})()`;
 const [profile,themeRoot]=process.argv.slice(2);
 const inspectTheme=themeRoot==='--inspect-theme';
 let themeSource=null;
@@ -49,14 +51,14 @@ await new Promise(resolve=>{
       if(m.result.exceptionDetails)result.error='Renderer evaluation failed';
       else{result.renderer=m.result.result.value;result.rendererReady=!!result.renderer?.bodyChildren}
       if(themeSource&&!result.error){socket.send(JSON.stringify({id:4,sessionId,method:'Runtime.evaluate',params:{expression:themeSource,returnByValue:true}}));return}
-      if(inspectTheme&&!result.error){socket.send(JSON.stringify({id:5,sessionId,method:'Runtime.evaluate',params:{expression:'({mounted:!!window.__kenGlassPanel && !!document.getElementById("ken-glass-switcher")?.shadowRoot?.getElementById("toggle"),styleLength:document.getElementById("ken-codex-glass")?.textContent.length||0,mode:window.__kenGlassPanel?.getState().mode})',returnByValue:true}}));return}
+      if(inspectTheme&&!result.error){socket.send(JSON.stringify({id:5,sessionId,method:'Runtime.evaluate',params:{expression:themeExpression,returnByValue:true}}));return}
       finish();
     }else if(m.id===4){
       if(m.result.exceptionDetails){result.error='Theme injection failed';finish();return}
-      socket.send(JSON.stringify({id:5,sessionId,method:'Runtime.evaluate',params:{expression:'({mounted:!!window.__kenGlassPanel && !!document.getElementById("ken-glass-switcher")?.shadowRoot?.getElementById("toggle"),styleLength:document.getElementById("ken-codex-glass")?.textContent.length||0,mode:window.__kenGlassPanel?.getState().mode})',returnByValue:true}}));
+      socket.send(JSON.stringify({id:5,sessionId,method:'Runtime.evaluate',params:{expression:themeExpression,returnByValue:true}}));
     }else if(m.id===5){
       result.theme=m.result.result.value;
-      if(!result.theme?.mounted||result.theme.styleLength<500)result.error='Theme panel or CSS was not mounted';
+      if(!result.theme?.mounted||(result.theme.mode!=='original'&&result.theme.styleLength<500))result.error='Theme panel or CSS was not mounted';
       finish();
     }
   };

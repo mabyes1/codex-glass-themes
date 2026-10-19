@@ -9,6 +9,7 @@
     "check": "node --check packaging/payload/theme/theme-host.mjs && node --check packaging/payload/theme/theme-panel.js && node --check packaging/payload/theme/glass-design.mjs && node --check packaging/payload/theme/glass-presets.mjs && node --check packaging/payload/theme/aquarium.mjs && node --check packaging/payload/theme/aquarium-backdrops.mjs && node --check packaging/payload/theme/cosmos.mjs && node --check packaging/payload/theme/windows-compat.mjs && node --check packaging/payload/theme/native-watch.mjs && node --check packaging/payload/Probe-CdpSocket.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:cdp": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/codex-cdp.test.ps1",
-    "test:compat-browser": "node tests/windows-compat.browser.mjs"
+    "test:compat-browser": "node tests/windows-compat.browser.mjs",
+    "test:watcher-recovery": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/watcher-recovery.test.ps1"
   }
 }

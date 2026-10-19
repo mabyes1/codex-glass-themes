@@ -49,6 +49,8 @@ The appearance tests cover contrast, preset differences, neutral glass, image sh
 
 `npm run test:compat-browser` additionally exercises the real theme panel in a separate headless Chromium profile under both appearance policies: colors, local image storage, background strength, aquarium/Cosmos, blur, whole-window opacity, restoration and disposal. It discovers Edge/Chrome on Windows, or accepts `CHROME_PATH`. Reports and screenshots are saved under ignored `experiments/compat-browser-*`. The native bridge is stubbed: this validates renderer interactions and requested native modes, not actual DWM effects or Windows 10 installation.
 
+`npm run test:watcher-recovery` registers a unique, limited-user fixture task using the production logon/one-minute triggers. Its short script exits normally; a second scheduled run must occur within 95 seconds. The fixture task is removed in `finally`. It does not register a Codex callback or stop an app process. The current source also has controlled native-window recovery and health tests in `npm test`; see [the startup investigation](../docs/startup-recovery.md) for live acceptance boundaries.
+
 On Windows 11 x64 with the official Codex package installed, the installer harness performs isolated extraction/deployment and ownership/removal checks:
 
 ```powershell

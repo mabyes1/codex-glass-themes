@@ -1,6 +1,7 @@
 param([ValidateSet('Check','Stage','Install','Uninstall')][string]$Action='Install',[string]$InstallRoot=(Join-Path $env:USERPROFILE 'CodexGlass'))
 $ErrorActionPreference='Stop'
 Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop
+. (Join-Path $PSScriptRoot 'New-CodexWatcherTriggers.ps1')
 [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
 $product='CodexGlassThemes';$sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 $InstallRoot=[IO.Path]::GetFullPath($InstallRoot).TrimEnd('\')
@@ -113,8 +114,8 @@ function Start-IndependentWatcher($package){
     try{
         $action=New-ScheduledTaskAction -Execute $shell -Argument $arguments -WorkingDirectory $InstallRoot
         $principal=New-ScheduledTaskPrincipal -UserId $sid -LogonType Interactive -RunLevel Limited
-        $trigger=New-ScheduledTaskTrigger -AtLogOn -User $sid
-        $settings=New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+        $trigger=@(New-CodexWatcherTriggers -UserSid $sid)
+        $settings=New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
         Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Trigger $trigger -Settings $settings -Force|Out-Null;$registered=$true;$script:loginTaskChanged=$true;Start-ScheduledTask -TaskName $taskName
         $deadline=[DateTime]::UtcNow.AddSeconds(25)
         do{

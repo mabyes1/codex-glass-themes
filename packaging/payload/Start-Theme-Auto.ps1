@@ -12,6 +12,7 @@ $hostScript=Join-Path $source 'theme-host.mjs'
 $hostPidFile=Join-Path $source '.runtime\host.pid'
 $lastState=''
 $lastAcceptedMain=0
+$lastVerifiedAt=[DateTime]::MinValue
 $lastAttachKey=''
 . (Join-Path $PSScriptRoot 'Package-Runtime.ps1')
 . (Join-Path $PSScriptRoot 'Get-CodexAttachState.ps1')
@@ -56,7 +57,7 @@ try{
                     }
                 }
             }
-            $liveMain=@(Get-CodexProcesses|Where-Object {$_.CommandLine -notmatch '--type=' -and $_.CommandLine -notlike ('*'+(Join-Path $PSScriptRoot 'experiments')+'*') -and $_.ProcessId -ne $lastAcceptedMain})
+            $liveMain=@(Get-CodexProcesses|Where-Object {$_.CommandLine -notmatch '--type=' -and $_.CommandLine -notlike ('*'+(Join-Path $PSScriptRoot 'experiments')+'*') -and ($_.ProcessId -ne $lastAcceptedMain -or ([DateTime]::UtcNow-$lastVerifiedAt).TotalSeconds -ge 30)})
             foreach($candidate in $liveMain){
                 $browserProfile=Get-CodexBrowserProfile -MainPid $candidate.ProcessId
                 if($browserProfile -ne (Join-Path $env:APPDATA 'Codex\web\Codex')){continue}
@@ -72,18 +73,25 @@ try{
                 if(!$snapshot.mainTargetPresent){continue}
                 $livePort=$snapshot.port
                 $acceptance=(& $node (Join-Path $PSScriptRoot 'Probe-CdpSocket.mjs') ('port:'+$livePort) --inspect-theme|ConvertFrom-Json)
-                if($acceptance.rendererReady -and $acceptance.theme.mounted -and !$acceptance.error){
+                $lastVerifiedAt=[DateTime]::UtcNow
+                if($acceptance.rendererReady -and $acceptance.theme.mounted -and $acceptance.theme.nativeReady -and !$acceptance.error){
                     [ordered]@{mainPid=$candidate.ProcessId;image=$candidate.ExecutablePath;mainCreated=$candidate.CreationDate.ToString('o');browserProfile=$browserProfile;port=$livePort;renderer=$acceptance.renderer;theme=$acceptance.theme;checkedAt=(Get-Date).ToString('o')}|ConvertTo-Json -Depth 5|Set-Content -LiteralPath (Join-Path $runtime 'live-acceptance.json') -Encoding UTF8
                     [ordered]@{state='connected';mainPid=$candidate.ProcessId;port=$livePort;checkedAt=(Get-Date).ToString('o')}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $runtime 'attach-status.json') -Encoding UTF8
                     $lastAcceptedMain=$candidate.ProcessId
                     Write-State ('Live user theme verified: PID '+$candidate.ProcessId+', CDP '+$livePort)
                     Write-CodexStartupTrace 'attach' 'connected' 0 ('mainPid='+$candidate.ProcessId+';port='+$livePort)
+                }else{
+                    $lastAcceptedMain=0
+                    $nativeState=if($acceptance.theme.nativeFailed){'native-background-error'}elseif($acceptance.theme.nativePending){'waiting-native-window'}else{'waiting-theme'}
+                    [ordered]@{state=$nativeState;mainPid=$candidate.ProcessId;port=$livePort;nativeFailed=$acceptance.theme.nativeFailed;nativePending=$acceptance.theme.nativePending;error=$acceptance.error;checkedAt=(Get-Date).ToString('o')}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $runtime 'attach-status.json') -Encoding UTF8
                 }
             }
         }catch{Write-State ('Error: '+$_.Exception.Message)}
+        [ordered]@{workerPid=$PID;state=$lastState;checkedAt=(Get-Date).ToString('o')}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $runtime 'watcher-health.json') -Encoding UTF8
         Start-Sleep -Seconds 5
     }
 }finally{
+    try{[ordered]@{workerPid=$PID;state='stopped';checkedAt=(Get-Date).ToString('o')}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $runtime 'watcher-health.json') -Encoding UTF8}catch{}
     try{Clear-PackageThemeHook}catch{Write-State ('Package hook cleanup error: '+$_.Exception.Message)}
     Remove-Item -LiteralPath $pidFile -ErrorAction SilentlyContinue
     Write-State 'Auto attach stopped'
