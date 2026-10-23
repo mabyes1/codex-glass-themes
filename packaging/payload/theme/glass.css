@@ -207,6 +207,12 @@ html[data-ken-glass] [role='dialog'],html[data-ken-glass] [role='menu'] {
   backdrop-filter:none!important;
   box-shadow:0 16px 48px var(--kg-shadow),inset 0 0 0 1px var(--kg-stroke),inset 0 1px 0 var(--kg-gleam)!important;
 }
+/* Frosted menus retain the backdrop without letting sidebar text show through. */
+html[data-ken-glass] :is([role='menu'],[role='listbox'],[data-slot='popover-content'],[role='dialog']) {
+  background:color-mix(in srgb,var(--kg-menu) 72%,transparent)!important;
+  backdrop-filter:blur(24px) saturate(135%)!important;
+  -webkit-backdrop-filter:blur(24px) saturate(135%)!important;
+}
 html[data-ken-glass] ::selection {background:var(--kg-selected);}
 /* Restrict decoration to the observed navigation controls and reading surface. */
 html[data-ken-glass] aside.app-shell-left-panel [data-sidebar-destination][aria-current='page'] {

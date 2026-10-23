@@ -102,3 +102,15 @@ button:focus-visible,input:focus-visible,summary:focus-visible {outline:2px soli
 @keyframes panel-in {from {opacity:0;transform:translateY(-4px)}to {opacity:1;transform:translateY(0)}}
 @media(max-width:640px) {#panel {right:12px}#toggle {padding:0 8px}}
 @media(prefers-reduced-motion:reduce) {#panel {animation:none}.preset {transition:none}}
+
+/* Match the native floating menus. */
+#panel {background:color-mix(in srgb,var(--kg-menu,#242629) 72%,transparent);backdrop-filter:blur(24px) saturate(135%);-webkit-backdrop-filter:blur(24px) saturate(135%);}
+
+.food-tasting {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:8px}
+.food-tasting button {display:flex;align-items:center;justify-content:space-between;gap:6px;border:1px solid var(--panel-line);border-radius:9px;padding:9px 10px;background:var(--kg-soft,#ffffff06);font-size:12px}
+.food-tasting button:hover {background:var(--kg-hover,#ffffff14)}
+.food-tasting [data-food-tier="astra"] {border-color:#e2b95880}
+.food-tasting [data-food-tier="sol"] {border-color:#9ed4ff70}
+.food-tasting [data-food-tier="terra"] {border-color:#bc956870}
+.food-tasting [data-food-tier="luna"] {border-color:#a3c86870}
+.food-tasting button span {font-size:16px}

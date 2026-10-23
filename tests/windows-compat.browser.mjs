@@ -28,7 +28,15 @@ const server=createServer((req,res)=>{
   if(req.url==='/panel.js'){res.writeHead(200,{'Content-Type':'text/javascript; charset=utf-8'});res.end(source);return;}
   const compatibility=new URL(req.url,'http://localhost').searchParams.get('compat')==='1';
   res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});
-  res.end(`<!doctype html><html data-theme="dark"><head><meta charset="utf-8"></head><body><main data-app-shell-main-surface><h1>Compatibility acceptance fixture</h1><p>Colors, artwork, and readable foreground.</p></main><script>localStorage.clear();window.__kenGlassWin10Compat=${compatibility};window.nativeRequests=[];window.__kenGlassNative=value=>{nativeRequests.push(JSON.parse(value));queueMicrotask(()=>window.__kenGlassNativeResult?.(true,''));};</script><script src="/panel.js"></script></body></html>`);
+  res.end(`<!doctype html><html data-theme="dark"><head><meta charset="utf-8"></head><body><main data-app-shell-main-surface><h1>Compatibility acceptance fixture</h1><p>Colors, artwork, and readable foreground.</p></main><script>localStorage.clear();window.__kenGlassWin10Compat=${compatibility};window.nativeRequests=[];window.__kenGlassNative=value=>{nativeRequests.push(JSON.parse(value));queueMicrotask(()=>window.__kenGlassNativeResult?.(true,''));};</script><script>
+window.fixtureQuota={rate_limit:{primary_window:{used_percent:25,reset_at:1792800000},secondary_window:{used_percent:40,reset_at:1793000000}},rate_limit_reset_credits:{available_count:2}};
+window.fixtureQuery={state:{data:window.fixtureQuota,dataUpdatedAt:Date.now()}};
+window.fixtureListeners=[];window.fixtureResetConfirm=0;
+const fixtureClient={getQueryCache:()=>({find:()=>window.fixtureQuery,subscribe:fn=>{window.fixtureListeners.push(fn);return ()=>{};}}),refetchQueries:()=>Promise.resolve()};
+const profileButton=document.createElement('button');profileButton.setAttribute('aria-label','Open profile menu');profileButton.setAttribute('aria-controls','fixture-profile-menu');profileButton.setAttribute('aria-expanded','false');
+profileButton.__reactFiber$fixture={memoizedProps:{client:fixtureClient}};
+profileButton.addEventListener('pointerdown',()=>{profileButton.setAttribute('aria-expanded','true');if(document.getElementById('fixture-profile-menu'))return;const menu=document.createElement('div');menu.id='fixture-profile-menu';menu.innerHTML='<div role="menuitem">Usage</div><button>2 resets available</button>';menu.querySelector('[role="menuitem"]').__reactFiber$fixture={memoizedProps:{onSelect:()=>{}}};menu.querySelector('button').onclick=()=>{window.fixtureResetConfirm++;};document.body.append(menu);});document.body.append(profileButton);
+</script><script src="/panel.js"></script></body></html>`);
 });
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const origin=`http://127.0.0.1:${server.address().port}`;
@@ -61,6 +69,15 @@ try{
       const $=id=>shadow.getElementById(id),choose=mode=>shadow.querySelector('[data-mode="'+mode+'"]').click();
       const last=()=>nativeRequests.at(-1),state=()=>window.__kenGlassPanel.getState();
       const background=document.getElementById('ken-glass-background');
+      const quota=document.getElementById('ken-usage-shortcuts').shadowRoot;
+      check(window.__kenUsageShortcuts.getDiagnostics().connected,'quota query cache connects');
+      check(quota.getElementById('primary').querySelector('strong').textContent==='75%','quota primary shows remaining percentage');
+      check(quota.getElementById('weekly').querySelector('strong').textContent==='60%','quota weekly shows remaining percentage');
+      check(quota.getElementById('primary').title.includes('恢復時間'),'quota reset time tooltip');
+      fixtureQuota.rate_limit.primary_window.used_percent=80;fixtureListeners.forEach(fn=>fn({query:{queryKey:['rate-limit-status']}}));
+      check(quota.getElementById('primary').querySelector('strong').textContent==='20%','quota observes cache updates');
+      quota.getElementById('reset').click();await new Promise(resolve=>setTimeout(resolve,120));
+      check(fixtureResetConfirm===1&&fixtureQuota.rate_limit_reset_credits.available_count===2,'reset shortcut opens confirmation without consuming credit');
       check(last().mode===(${compatibility}?'restore':'background'),'clear mode native routing');
       check(getComputedStyle(document.documentElement).backgroundColor===(${compatibility}?'rgb(16, 20, 27)':'rgba(0, 0, 0, 0)'),'opaque fallback vs transparent native canvas');
       choose('color');$('background-blur').checked=true;$('background-blur').onchange();
@@ -90,6 +107,7 @@ try{
     await writeFile(join(report,compatibility?'compatibility.png':'native-routing.png'),Buffer.from(screenshot.data,'base64'));
     await evaluate('window.__kenGlassPanel.dispose(true)');
     assert.equal(await evaluate('!!document.getElementById("ken-glass-switcher")'),false);
+    assert.equal(await evaluate('!!document.getElementById("ken-usage-shortcuts")'),false);
     results.push(result);
   }
   assert.deepEqual(exceptions,[],'Unexpected browser exceptions');

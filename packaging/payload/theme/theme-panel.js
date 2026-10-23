@@ -1,6 +1,108 @@
+// Uses the application's own query cache and confirmation flow; never calls reset APIs.
+function installUsageShortcuts() {
+  window.__kenUsageShortcuts?.dispose();
+  const host = document.createElement('div');
+  host.id = 'ken-usage-shortcuts';
+  const shadow = host.attachShadow({mode:'open'});
+  shadow.innerHTML = `<style>
+    :host{position:fixed;top:5px;left:350px;z-index:2147482900;-webkit-app-region:no-drag;color:var(--kg-primary,#eee);font:12px/1.3 "Segoe UI","Microsoft JhengHei",sans-serif}
+    nav{display:flex;gap:6px}button{font:inherit;color:inherit;cursor:pointer;display:flex;align-items:center;gap:7px;height:28px;padding:0 11px;border:1px solid var(--kg-stroke,#ffffff25);border-radius:9px;background:color-mix(in srgb,var(--kg-menu,#17202b) 60%,transparent);backdrop-filter:blur(24px) saturate(135%);-webkit-app-region:no-drag}
+    button:hover{background:var(--kg-hover,#ffffff25)}button:focus-visible{outline:2px solid var(--kg-focus,#9df)}strong{font-weight:600;font-variant-numeric:tabular-nums}span{opacity:.8}.meter{width:34px;height:3px;background:#8885;border-radius:3px;overflow:hidden}.meter i{display:block;height:100%;background:var(--kg-link,#98d4e4);width:0;transition:width .3s}
+    button:disabled{opacity:.55;cursor:wait}@media(max-width:1050px){:host{left:345px}.meter{display:none}button{padding:0 7px;gap:4px}}@media(max-width:780px){:host{left:340px}button{padding:0 5px}span{display:none}}@media(max-width:620px){:host{display:none}}
+  </style><nav aria-label="額度快捷區"><button id="primary" title="讀取 5 小時額度"><span>5 小時</span><strong>—</strong><b class="meter"><i></i></b></button><button id="weekly" title="讀取每週額度"><span>每週</span><strong>—</strong><b class="meter"><i></i></b></button><button id="reset" title="開啟原生重置券視窗；仍需確認"><span>重置券</span><strong>—</strong></button></nav>`;
+  document.body.append(host);
+  let client, unsubscribe, disposed = false, busy = false, updatedAt = 0;
+  const button = () => document.querySelector('[aria-label="開啟個人檔案選單"],[aria-label="Open profile menu"]');
+  const fiber = node => node?.[Object.keys(node).find(k => k.startsWith('__reactFiber$'))];
+  function discoverClient() {
+    for (let f = fiber(button()); f; f = f.return) {
+      const v = f.memoizedProps?.value || f.memoizedProps?.client;
+      if (typeof v?.getQueryCache === 'function') return v;
+    }
+  }
+  const nativeMenu = () => { const id = button()?.getAttribute('aria-controls'); return id ? document.getElementById(id) : null; };
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+  function select(node) {
+    for (let f = fiber(node); f; f = f.return) {
+      if (typeof f.memoizedProps?.onSelect === 'function') {
+        f.memoizedProps.onSelect({defaultPrevented:false,preventDefault(){this.defaultPrevented=true;},stopPropagation(){}});
+        return true;
+      }
+      if (f.stateNode === nativeMenu()) break;
+    }
+    return false;
+  }
+  async function openNative(reset = false) {
+    if (busy || disposed) return;
+    busy = true;
+    try {
+      const b = button();
+      if (!b) throw Error('找不到原生帳號選單');
+      if (b.getAttribute('aria-expanded') !== 'true') b.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,pointerType:'mouse'}));
+      for (let n=0;n<20&&!nativeMenu();n++) await wait(50);
+      const menu = nativeMenu();
+      if (!menu) throw Error('原生選單未開啟');
+      const usage = [...menu.querySelectorAll('[role="menuitem"]')].find(e => /^(剩餘用量|Usage|Remaining usage)$/.test(e.innerText.trim()));
+      if (usage && usage.parentElement.dataset.state !== 'open') select(usage);
+      if (reset) {
+        let target;
+        for (let n=0;n<20&&!target;n++) {
+          target = [...menu.querySelectorAll('[role="menuitem"],button')].find(e => /可用重置|resets? available|available resets?/i.test(e.innerText) && e.children.length < 10);
+          if (!target) await wait(50);
+        }
+        if (!target) throw Error('重置入口尚未就緒，請在原生用量區開啟');
+        target.click();
+      }
+    } catch (error) {
+      shadow.getElementById('reset').title = error.message;
+    } finally { busy = false; }
+  }
+  function render() {
+    if (disposed || !client) return;
+    const query = client.getQueryCache().find({queryKey:['rate-limit-status'],exact:true});
+    const data = query?.state.data;
+    updatedAt = query?.state.dataUpdatedAt || 0;
+    for (const [id,win] of [['primary',data?.rate_limit?.primary_window],['weekly',data?.rate_limit?.secondary_window]]) {
+      const b = shadow.getElementById(id), value = Number.isFinite(win?.used_percent) ? Math.max(0,Math.min(100,100-win.used_percent)) : null;
+      b.querySelector('strong').textContent = value == null ? '—' : `${Math.round(value)}%`;
+      b.querySelector('i').style.width = `${value ?? 0}%`;
+      const label = id === 'primary' ? '5 小時' : '每週';
+      const reset = Number.isFinite(win?.reset_at) ? new Date(win.reset_at*1000).toLocaleString() : '尚無資料';
+      b.title = `${label}剩餘 ${value == null ? '尚無資料' : Math.round(value)+'%'}\n恢復時間：${reset}\n點擊查看原生用量明細`;
+      b.setAttribute('aria-label',b.title);
+    }
+    const reset = shadow.getElementById('reset'), count = data?.rate_limit_reset_credits?.available_count;
+    reset.querySelector('strong').textContent = Number.isFinite(count) ? `${count} 次` : '—';
+    reset.title = `重置券 ${Number.isFinite(count) ? count+' 次' : '尚無資料'}；點擊開啟原生視窗，仍需確認`;
+    reset.setAttribute('aria-label',reset.title);
+  }
+  function connect() {
+    if (disposed) return;
+    const next = discoverClient();
+    if (next && next !== client) {
+      unsubscribe?.(); client = next;
+      unsubscribe = client.getQueryCache().subscribe(event => {if(event.query?.queryKey?.length === 1 && event.query.queryKey[0] === 'rate-limit-status') render();});
+    }
+    render();
+  }
+  function refresh() {
+    connect();
+    if (client && !document.hidden && Date.now()-updatedAt>60000) client.refetchQueries({queryKey:['rate-limit-status'],exact:true}).catch(()=>{});
+  }
+  shadow.getElementById('primary').onclick = () => openNative();
+  shadow.getElementById('weekly').onclick = () => openNative();
+  shadow.getElementById('reset').onclick = () => openNative(true);
+  const timer = setInterval(refresh,60000);
+  const retry = setInterval(connect,3000);
+  window.addEventListener('focus',refresh);
+  window.__kenUsageShortcuts = {getDiagnostics:()=>({connected:!!client,updatedAt,buttons:[...shadow.querySelectorAll('button')].map(e=>({text:e.textContent,title:e.title}))}),dispose(){disposed=true;clearInterval(timer);clearInterval(retry);unsubscribe?.();window.removeEventListener('focus',refresh);host.remove();delete window.__kenUsageShortcuts;}};
+  connect();
+}
+
 // Runs only in the Codex main renderer. Images stay in local IndexedDB.
 (function installGlass(css, appearanceFor, presets, panelCss, createAquarium, aquariumImage, fishAtlas, reefAtlas, createCosmos, galaxyImage, exoticAtlas) {
   window.__kenGlassPanel?.dispose(false);
+  installUsageShortcuts();
   for (const id of ['ken-desktop-test', 'ken-glass-foreground', 'ken-glass-background', 'ken-glass-switcher']) {
     document.getElementById(id)?.remove();
   }
@@ -40,6 +142,7 @@
   background.id = 'ken-glass-background'; background.setAttribute('aria-hidden', 'true');
   document.body.prepend(background);
   const oceanScene=()=>oceanScenes.find(scene=>scene.id===prefs.aquariumScene)||oceanScenes[0];
+  let tokenUsage=null;
   const aquarium = createAquarium(background, oceanScene().url, fishAtlas, reefAtlas, exoticAtlas);
   const cosmos = createCosmos(background, galaxyImage);
   const animatedMode = () => prefs.mode === 'aquarium' || prefs.mode === 'cosmos';
@@ -81,6 +184,16 @@
         <label class="range-label" for="fish-count">魚魚數量<output id="fish-count-value"></output></label>
         <input id="fish-count" type="range" min="14" max="90" step="1">
         <div class="reading-options fish-density" role="group" aria-label="魚群密度"><button data-fish-count="24">悠游 · 24</button><button data-fish-count="60">熱鬧 · 60</button><button data-fish-count="90">滿滿魚魚 · 90</button></div>
+        <p class="note" id="token-feed-status" role="status">Token 飼料：等候本機用量事件…</p>
+        <p class="note">每 10,000 tokens 換一顆，啟動後累積。Astra 🥹✨ · Sol 😋💕 · Terra 😑💭 · Luna 🤢🤮。</p>
+        <div class="section-heading"><strong>手動試吃</strong><span>一次 6 顆 · 不計入 token 用量</span></div>
+        <div class="food-tasting" role="group" aria-label="選一種飼料試吃">
+          <button data-food-tier="astra" title="Astra · 金色飼料">✦ Astra <span>🥹✨</span></button>
+          <button data-food-tier="sol" title="Sol · 高級飼料">◈ Sol <span>😋💕</span></button>
+          <button data-food-tier="terra" title="Terra · 普通飼料">⬡ Terra <span>😑💭</span></button>
+          <button data-food-tier="luna" title="Luna · 大便口味飼料">💩 Luna <span>🤢🤮</span></button>
+        </div>
+        <p class="note" id="food-tasting-status" role="status">選個口味，看看魚魚的表情。</p>
         <label class="range-label" for="aquarium-pause">暫停游動<input id="aquarium-pause" type="checkbox"></label>
         <p class="note">休息時留下靜態魚影。也會配合系統的減少動態效果設定。</p>
       </div>
@@ -235,6 +348,12 @@
   $('aquarium-pause').onchange = () => { prefs.aquariumMotion = !$('aquarium-pause').checked; apply(false); };
   $('fish-count').oninput=()=>{prefs.aquariumFishCount=Number($('fish-count').value);apply(false);};
   shadow.querySelectorAll('[data-fish-count]').forEach(b=>b.onclick=()=>{prefs.aquariumFishCount=Number(b.dataset.fishCount);apply(false);});
+  shadow.querySelectorAll('[data-food-tier]').forEach(button=>button.onclick=()=>{
+    const count=aquarium.previewFood(button.dataset.foodTier);
+    $('food-tasting-status').textContent=count?`${button.dataset.foodTier} · ${count} 顆試吃飼料落下了！`:
+      aquarium.getDiagnostics().running?'魚魚還在吃，等一下再撒。':'先恢復魚魚游動，就可以試吃。';
+    if(count)open(false);
+  });
   $('cosmos-pause').onchange = () => { prefs.cosmosMotion = !$('cosmos-pause').checked; apply(false); };
   $('opacity').oninput = () => {
     prefs[prefs.keepForeground ? prefs.mode === 'cosmos' ? 'cosmosOpacity' : prefs.mode === 'aquarium' ? 'aquariumOpacity' : 'backgroundOpacity' : 'opacity'] = Number($('opacity').value);
@@ -325,10 +444,19 @@
   };
   window.__kenGlassPanel = {
     getState:() => ({...prefs, colors:{...prefs.colors}, hasImage:!!imageURL}),
-    getDiagnostics:() => ({themeRepairs,backdropRepairs,expectedTheme,nativeFailed,nativePending,aquarium:aquarium.getDiagnostics(),cosmos:cosmos.getDiagnostics()}),
+    getDiagnostics:() => ({themeRepairs,backdropRepairs,expectedTheme,nativeFailed,nativePending,tokenUsage,aquarium:aquarium.getDiagnostics(),cosmos:cosmos.getDiagnostics()}),
+    receiveTokenUsage(usage) {
+      if(disposed||!usage||!Array.isArray(usage.events))return;
+      tokenUsage=usage;aquarium.feed(usage.events);
+      const counts=usage.byModel||{};
+      $('token-feed-status').textContent=`Token 飼料 · ${(usage.totalTokens||0).toLocaleString()} tokens · `+
+        ['astra','sol','terra','luna'].map(k=>`${k} ${(counts[k]||0).toLocaleString()}`).join(' / ')+
+        (counts.unknown?` / 未知模型 ${counts.unknown.toLocaleString()}`:'')+(usage.errors?' · 部分紀錄暫時讀不到':'');
+    },
     importFile,
     open:() => open(true),
     dispose(restore = true) {
+      window.__kenUsageShortcuts?.dispose();
       disposed = true; aquarium.dispose(); cosmos.dispose(); themeGuard.disconnect(); titleGuard.disconnect(); unsubscribeSystemTheme?.();
       window.removeEventListener('message',backdropChanged);
       window.removeEventListener('focus',activated); document.removeEventListener('visibilitychange',visible);

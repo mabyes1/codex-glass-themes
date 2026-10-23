@@ -10,7 +10,10 @@ import {aquariumBackdrops} from './aquarium-backdrops.mjs';
 import {createCosmosLayer} from './cosmos.mjs';
 import {startBackdropWatch} from './native-watch.mjs';
 import {getWindowsAppearancePolicy} from './windows-compat.mjs';
-import {release} from 'node:os';
+import {release,homedir} from 'node:os';
+import {createTokenFeed} from './token-feed.mjs';
+const tokenFeed=createTokenFeed(join(process.env.CODEX_HOME||join(homedir(),'.codex'),'sessions'));
+await tokenFeed.poll();
 const compatibility=getWindowsAppearancePolicy(release()).compatibility;
 const exec=promisify(execFile),dir=dirname(fileURLToPath(import.meta.url)),runtime=join(dir,'.runtime');
 await mkdir(runtime,{recursive:true});
@@ -36,7 +39,7 @@ const source=`window.__kenGlassWin10Compat=${compatibility};\n`+(await readFile(
  .replace('COSMOS_PLACEHOLDER',()=>createCosmosLayer.toString())
  .replace('GALAXY_IMAGE_PLACEHOLDER',()=>JSON.stringify(galaxyImage));
 let socket=null,seq=0,pending=new Map(),nativeQueue=Promise.resolve(),nativeRevision=0,stopping=false,scriptId=null;
-let backdropWatch=null,nativeWanted=null;
+let backdropWatch=null,nativeWanted=null,lastUsageSignature=null;
 let nativeRetryTimer=null,nativeFailures=0,nativeFailed=false,nativePending=false;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function call(method,params={}){return new Promise((resolve,reject)=>{const id=++seq,timer=setTimeout(()=>{pending.delete(id);reject(Error('CDP timeout: '+method))},10000);pending.set(id,{resolve,reject,timer});socket.send(JSON.stringify({id,method,params}))})}
@@ -118,11 +121,12 @@ async function connect(){
  const target=targets.find(t=>t.type==='page'&&t.url==='app://-/index.html');if(!target)throw Error('Waiting for main window');
  socket=new WebSocket(target.webSocketDebuggerUrl);
  await new Promise((r,j)=>{socket.onopen=r;socket.onerror=j});
- socket.onmessage=e=>{const m=JSON.parse(e.data);const p=pending.get(m.id);if(p){clearTimeout(p.timer);pending.delete(m.id);m.error?p.reject(Error(m.error.message)):p.resolve(m.result)}else if(m.method==='Runtime.bindingCalled'){
+ socket.onmessage=e=>{const m=JSON.parse(e.data);if(m.method==='Runtime.executionContextsCleared')lastUsageSignature=null;const p=pending.get(m.id);if(p){clearTimeout(p.timer);pending.delete(m.id);m.error?p.reject(Error(m.error.message)):p.resolve(m.result)}else if(m.method==='Runtime.bindingCalled'){
   if(m.params.name==='__kenGlassNative')onNative(m.params.payload);
   else if(m.params.name==='__kenGlassNativeCheck')checkBackdrop(m.params.payload).catch(e=>console.error(e.message));
  }};
  socket.onclose=()=>{clearTimeout(nativeRetryTimer);nativeRetryTimer=null;backdropWatch?.off();for(const p of pending.values()){clearTimeout(p.timer);p.reject(Error('CDP disconnected'))}pending.clear()};
+ lastUsageSignature=null;
  await call('Runtime.enable');await call('Page.enable');
  await call('Runtime.addBinding',{name:'__kenGlassNative'});
  await call('Runtime.addBinding',{name:'__kenGlassNativeCheck'});
@@ -137,6 +141,14 @@ try{
  while(!stopping){
   try{await access(stopFile);stopping=true;break}catch{}
   if(!socket||socket.readyState!==1){try{await connect()}catch(e){console.error(new Date().toISOString(),e.message);socket?.close();socket=null}}
+  try{
+   const usage=await tokenFeed.poll();
+   const signature=JSON.stringify([usage.totalTokens,usage.errors]);
+   if(socket?.readyState===1&&(usage.events.length||signature!==lastUsageSignature)){
+    const accepted=await call('Runtime.evaluate',{expression:`Boolean(window.__kenGlassPanel&&(window.__kenGlassPanel.receiveTokenUsage(${JSON.stringify(usage)}),true))`,returnByValue:true});
+    if(accepted.result?.value)lastUsageSignature=signature;
+   }
+  }catch(e){console.error('Token feed:',e.message);}
   await sleep(2000);
  }
 }finally{

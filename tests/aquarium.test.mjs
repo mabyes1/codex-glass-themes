@@ -6,7 +6,7 @@ import {createAquariumLayer} from '../packaging/payload/theme/aquarium.mjs';
 function scene(backdropURL='',fishURL='',reefURL='',random=()=>.5,exoticURL='') {
   const events=new Map(), mediaEvents=new Map(), timers=new Map(), children=[], images=[], headings=[], positions=[], draws=[], rotations=[];
   let now=1, id=0, removed=0, observed=0;
-  const context={getImageData:()=>({data:new Uint8ClampedArray([0,0,0,252])}),putImageData(){},translate(x){positions.push(x);},scale(x){headings.push(x);},rotate(angle){rotations.push(angle);},clearRect(){},fillRect(){},save(){},restore(){},drawImage(...args){if(args.length===5)draws.push({image:args[0],textureWidth:args[0].width,width:args[3],alpha:this.globalAlpha});},fill(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},clip(){},arc(){},stroke(){},createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})};
+  const context={getImageData:()=>({data:new Uint8ClampedArray([0,0,0,252])}),putImageData(){},translate(x){positions.push(x);},scale(x){headings.push(x);},rotate(angle){rotations.push(angle);},clearRect(){},fillRect(){},save(){},restore(){},drawImage(...args){if(args.length===5)draws.push({image:args[0],textureWidth:args[0].width,width:args[3],alpha:this.globalAlpha});},fill(){},fillText(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},clip(){},arc(){},stroke(){},createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})};
   const media={matches:false,addEventListener:(name,fn)=>mediaEvents.set(name,fn),removeEventListener:name=>mediaEvents.delete(name)};
   const document={hidden:false,addEventListener:(name,fn)=>events.set(name,fn),removeEventListener:name=>events.delete(name),
     createElement:()=>({width:0,height:0,dataset:{},style:{},setAttribute(){},getContext:()=>context,toDataURL:()=> 'data:image/png;base64,fixture',remove(){removed++;}})};
@@ -163,4 +163,65 @@ test('density and backdrop changes reuse decoded fish, preserve pause and keep o
   s.layer.setFishCount(-1);assert.equal(s.layer.getDiagnostics().fishCount,14);
   s.layer.dispose();s.layer.setFishCount(60);s.layer.setBackdrop('late','late');
   assert.equal(s.layer.getDiagnostics().fishCount,14);assert.equal(s.timers.size,0);
+});
+
+test('token feeding accumulates fractions, caps bursts and fish eat every model tier',()=>{
+ for(const tier of ['astra','sol','terra','luna']){
+  const s=scene('ocean','base-atlas','reef-atlas');s.layer.setActive(true);s.images.forEach(img=>img.onload());
+  s.layer.feed([{tier,tokens:9999}]);assert.equal(s.layer.getDiagnostics().feeding.pellets,0);
+  s.layer.feed([{tier,tokens:1}]);assert.equal(s.layer.getDiagnostics().feeding.pellets,1);
+  let reacted=false;
+  for(let i=0;i<700;i++){s.tick(1000/24);if(s.layer.getDiagnostics().feeding.reactions.includes(tier))reacted=true;}
+  assert.ok(s.layer.getDiagnostics().feeding.eaten[tier]>0,`${tier} should be eaten`);assert.ok(reacted);
+  s.layer.feed([{tier,tokens:10000000}]);assert.ok(s.layer.getDiagnostics().feeding.pellets<=12);
+  s.layer.setActive(false);s.layer.feed([{tier,tokens:100000}]);assert.ok(s.layer.getDiagnostics().feeding.pellets<=12);
+  s.layer.dispose();s.layer.feed([{tier,tokens:10000}]);assert.equal(s.layer.getDiagnostics().feeding.pellets,0);
+ }
+});
+
+test('manual tasting leaves token totals and fractional credit untouched, uses emoji and mouth capture',()=>{
+ for(const tier of ['astra','sol','terra','luna']){
+  const s=scene('ocean','base-atlas','reef-atlas');s.layer.setActive(true);s.images.forEach(img=>img.onload());
+  s.layer.feed([{tier,tokens:9999}]);assert.equal(s.layer.previewFood(tier),6);
+  assert.equal(s.layer.getDiagnostics().feeding.receivedTokens,9999);
+  let captures=0,maxDistance=0;
+  for(let i=0;i<1100;i++){
+   s.tick(1000/24);const d=s.layer.getDiagnostics().feeding;
+   if(d.lastCapture){captures++;maxDistance=Math.max(maxDistance,d.lastCapture.mouthDistance);assert.ok(!['whale','manta','hammer','moray'].includes(d.lastCapture.kind));}
+  }
+  const d=s.layer.getDiagnostics().feeding;
+  assert.ok(captures>0,`${tier} manual food should reach a mouth`);
+  assert.ok(maxDistance<10,'capture requires close mouth proximity');
+  assert.equal(d.receivedTokens,9999);assert.equal(d.manualPellets,6);
+  assert.ok(s.headings.every(scale=>Math.abs(scale)===1),'feeding and steep climbs must preserve fish body width');
+  assert.ok(!/[\u3400-\u9fff]/.test(Object.values(d.reactionEmoji).join('')));
+  if(tier==='luna')assert.ok(d.vomitBursts>0);
+  s.layer.feed([{tier,tokens:1}]);assert.equal(s.layer.getDiagnostics().feeding.receivedTokens,10000);
+  s.layer.setActive(true,false);const before=s.layer.getDiagnostics().feeding.manualPellets;
+  assert.equal(s.layer.previewFood(tier),0);assert.equal(s.layer.getDiagnostics().feeding.manualPellets,before);
+  s.layer.dispose();assert.equal(s.layer.previewFood(tier),0);
+ }
+});
+
+test('shared pellets have up to three contenders, one winner and disappointed losers',()=>{
+ const s=scene('ocean','base-atlas','reef-atlas');s.layer.setActive(true);s.images.forEach(img=>img.onload());
+ s.layer.feed([{tier:'sol',tokens:10000}]);
+ let sawContest=false,sawDisappointment=false;
+ for(let i=0;i<1300;i++){
+  s.tick(1000/24);const d=s.layer.getDiagnostics().feeding,c=d.competition;
+  assert.ok(c.chasing.every(count=>count<=3));
+  if(c.chasing.some(count=>count>1))sawContest=true;
+  if(c.disappointed>0)sawDisappointment=true;
+  assert.ok(d.eaten.sol<=1,'a single shared token must never be consumed twice');
+ }
+ const d=s.layer.getDiagnostics().feeding;
+ assert.ok(sawContest,'multiple fish must chase the same pellet');assert.equal(d.eaten.sol,1);
+ assert.ok(d.competition.lostRaces>0);assert.ok(sawDisappointment);
+ assert.equal(d.manualPellets,0);assert.equal(d.receivedTokens,10000);
+ assert.ok(s.layer.getDiagnostics().ornamentCache.entries>0);
+ assert.ok(s.layer.getDiagnostics().ornamentCache.kiB<1024);
+ const entries=s.layer.getDiagnostics().ornamentCache.entries;for(let i=0;i<200;i++)s.tick(1000/24);
+ assert.equal(s.layer.getDiagnostics().ornamentCache.entries,entries);
+ s.layer.dispose();assert.equal(s.layer.getDiagnostics().ornamentCache.entries,0);
+ s.layer.dispose();
 });

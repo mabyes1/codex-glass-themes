@@ -49,6 +49,125 @@ export function createAquariumLayer(container, backdropURL = '', fishURL = '', r
       depth:medium?.65:.42+Math.random()*.25,phase:i*1.7,
       tailVariant:Math.random()<.5?0:1,tailRate:.85+Math.random()*.3};
   }
+  const pellets=[], effects=[], foodRemainder={astra:0,sol:0,terra:0,luna:0,unknown:0};
+  const foodColors={astra:'#ffd45c',sol:'#a9d8ff',terra:'#bc9568',luna:'#795136',unknown:'#a2aab4'};
+  const eaten={astra:0,sol:0,terra:0,luna:0,unknown:0};
+  let lastFoodTime=0,receivedTokens=0,droppedFood=0,manualPellets=0,vomitBursts=0,lastCapture=null,contestedPellets=0,lostRaces=0,missedAttempts=0,expiredFood=0;
+  const ornamentCache=new Map();let ornamentUnit=0,ornamentBytes=0;
+  const reactionEmoji={astra:'🥹💖✨',sol:'😋💕',terra:'😑💭',luna:'🤢🤮',unknown:'🤔❔'};
+  const clamp=(value,low,high)=>Math.max(low,Math.min(high,value));
+  const wrapAngle=value=>Math.atan2(Math.sin(value),Math.cos(value));
+  const canForage=f=>!['whale','manta','hammer','moray'].includes(f.kind);
+  function spawnFood(tier,count,manual=false){
+    if(disposed||!Object.hasOwn(foodRemainder,tier)||!shouldRun())return 0;
+    const visible=Math.min(count,manual?6:12,48-pellets.length);
+    // Small, faceted token chips; a loose shower instead of one magnetic target.
+    const center=.30+Math.random()*.40;
+    for(let i=0;i<visible;i++){
+      const spread=(i-(visible-1)/2)*.035+(Math.random()-.5)*.025;
+      pellets.push({tier,x:clamp(center+spread,.10,.90),y:-.012-i*.014,
+        born:time+i*.13,phase:Math.random()*6.28,manual,spin:.5+Math.random()*.7,contenders:[],winner:null});
+      droppedFood++;if(manual)manualPellets++;
+    }
+    return visible;
+  }
+  function previewFood(tier){return spawnFood(tier,6,true);}
+  function feed(events) {
+    if(disposed||!Array.isArray(events))return;
+    for(const event of events){
+      if(!Number.isSafeInteger(event.tokens)||event.tokens<=0||!Object.hasOwn(foodRemainder,event.tier))continue;
+      receivedTokens+=event.tokens;foodRemainder[event.tier]+=event.tokens;
+      const count=Math.floor(foodRemainder[event.tier]/10000);foodRemainder[event.tier]%=10000;
+      spawnFood(event.tier,count);
+    }
+  }
+  function loseFood(f,race=true){
+    const p=f.food;f.food=null;f.foodCooldown=time+4;
+    if(p){p.contenders=p.contenders.filter(other=>other!==f);if(p.winner===f){p.winner=null;p.suction=false;}}
+    if(f.forage){f.forage.stage='missed';f.forage.at=time;}
+    f.disappointment={at:time+.25,race};
+    if(race)lostRaces++;else missedAttempts++;
+  }
+  function updateFood(w,h,unit,dt){
+    // Eligibility is shared by all food this frame; score each candidate once
+    // per pellet, keeping only its nearest three instead of sorting every fish.
+    const candidates=fish.filter(f=>canForage(f)&&f.screen&&!f.food&&!f.forage&&
+      time>=(f.foodCooldown||0)&&f.screen.x>0&&f.screen.x<w);
+    for(let i=pellets.length-1;i>=0;i--){
+      const p=pellets[i];if(time<p.born)continue;
+      if(!p.suction){p.y+=dt*.026;p.x+=Math.sin(time*.8+p.phase)*dt*.0015;}
+      p.contenders=p.contenders.filter(f=>fish.includes(f)&&f.food===p);
+      if(p.winner&&!p.contenders.includes(p.winner)){p.winner=null;p.suction=false;}
+      if(p.y>1.05||time-p.born>38){
+        for(const f of p.contenders)loseFood(f,false);
+        expiredFood++;pellets.splice(i,1);continue;
+      }
+      if(!p.winner&&p.y>.07&&p.contenders.length<3){
+        const nearest=[],limit=3-p.contenders.length;
+        for(const f of candidates){
+          if(f.food||time-p.born<=.5+f.tailRate*.25)continue;
+          const dx=p.x*w-f.screen.x,dy=p.y*h-f.screen.y,distance2=dx*dx+dy*dy;
+          if(distance2>=w*w*.09)continue;
+          const headingCost=1+Math.max(0,-f.screen.heading*dx/w)*2,score=distance2*headingCost*headingCost;
+          let slot=0;while(slot<nearest.length&&nearest[slot].score<=score)slot++;
+          if(slot<limit){nearest.splice(slot,0,{f,score});if(nearest.length>limit)nearest.pop();}
+        }
+        const available=nearest.map(item=>item.f);
+        for(const f of available.slice(0,3-p.contenders.length)){
+          f.food=p;f.noticeAt=time+.08+(f.phase%1)*.24;p.contenders.push(f);
+        }
+        if(!p.contested&&p.contenders.length>1){p.contested=true;contestedPellets++;}
+      }
+    }
+  }
+  function ornament(key,unit,paint,width,height){
+    if(ornamentUnit!==unit){
+      for(const item of ornamentCache.values()){item.width=0;item.height=0;}
+      ornamentCache.clear();ornamentBytes=0;ornamentUnit=unit;
+    }
+    let cached=ornamentCache.get(key);
+    if(!cached){
+      cached=document.createElement('canvas');cached.width=Math.ceil(width*unit);cached.height=Math.ceil(height*unit);
+      paint(cached.getContext('2d'),cached.width,cached.height);ornamentCache.set(key,cached);
+      ornamentBytes+=cached.width*cached.height*4;
+    }
+    return cached;
+  }
+  function emoji(text,x,y,unit){
+    const cached=ornament('emoji:'+text,unit,(ctx,w,h)=>{
+      ctx.font=`${Math.max(14,19*unit)}px sans-serif`;ctx.textAlign='center';
+      ctx.shadowColor='#03101e';ctx.shadowBlur=2*unit;ctx.fillText(text,w/2,h-10*unit);
+    },110,48);
+    context.drawImage(cached,x-cached.width/2,y-cached.height+10*unit,cached.width,cached.height);
+  }
+  function drawFood(w,h,unit){
+    for(const p of pellets){
+      if(time<p.born)continue;
+      const cached=ornament('chip:'+p.tier,unit,(ctx,cw,ch)=>{
+        ctx.translate(cw/2,ch/2);ctx.fillStyle=foodColors[p.tier];
+        if(p.tier==='astra'){ctx.shadowColor='#ffd45c';ctx.shadowBlur=8*unit;}
+        const r=3.2*unit;ctx.beginPath();
+        for(let k=0;k<6;k++){const a=k*Math.PI/3;ctx[k?'lineTo':'moveTo'](Math.cos(a)*r,Math.sin(a)*r);}
+        ctx.closePath();ctx.fill();ctx.strokeStyle=p.tier==='luna'?'#bfaa70':'#fff4cbb0';ctx.lineWidth=.65*unit;ctx.stroke();
+        ctx.shadowBlur=0;ctx.strokeStyle=p.tier==='luna'?'#46301e':'#142a4b';ctx.lineWidth=.7*unit;
+        ctx.beginPath();ctx.moveTo(-.5*unit,-1.5*unit);ctx.lineTo(-1.5*unit,0);ctx.lineTo(-.5*unit,1.5*unit);
+        ctx.moveTo(.5*unit,-1.5*unit);ctx.lineTo(1.5*unit,0);ctx.lineTo(.5*unit,1.5*unit);ctx.stroke();
+      },24,24);
+      context.save();context.globalAlpha=.97;
+      context.translate(p.x*w,p.y*h);context.rotate(p.phase+time*p.spin);
+      context.scale(1,.70+Math.sin(time*1.7+p.phase)*.16);
+      context.drawImage(cached,-cached.width/2,-cached.height/2,cached.width,cached.height);context.restore();
+    }
+    for(let i=effects.length-1;i>=0;i--){
+      const e=effects[i],age=time-e.at;if(age>2.2){effects.splice(i,1);continue;}
+      context.save();context.globalAlpha=Math.max(0,1-age/2.2)*.9;context.fillStyle='#b3ec57';
+      for(let n=0;n<9;n++){
+        context.beginPath();context.arc(e.x*w+Math.cos(e.angle)*age*(24+n*4)*unit,
+          e.y*h+Math.sin(e.angle)*age*(24+n*4)*unit+age*age*18*unit+Math.sin(n*7)*age*8*unit,
+          Math.max(.5,3.4-age)*unit,0,Math.PI*2);context.fill();
+      }context.restore();
+    }
+  }
   let drawOrder=[];
   function population(value) {
     const count=Number.isFinite(Number(value))?Math.max(14,Math.min(90,Math.round(Number(value)))):60;
@@ -181,6 +300,8 @@ export function createAquariumLayer(container, backdropURL = '', fishURL = '', r
     const unit = Math.min(w / 1000, h / 600);
     context.imageSmoothingQuality='high';
     context.clearRect(0,0,w,h);
+    const foodDt=Math.max(0,Math.min(.15,time-lastFoodTime));lastFoodTime=time;
+    updateFood(w,h,unit,foodDt);
     for (const f of drawOrder) {
       const slotWidth=f.size*unit, margin=Math.max(.12,slotWidth/(2*w)+.03);
       const driveRate=.55+f.tailRate*.18,drivePhase=f.phase;
@@ -191,7 +312,7 @@ export function createAquariumLayer(container, backdropURL = '', fishURL = '', r
       const turn=Math.floor(travel/span), progress=((travel%(2*span)+2*span)%(2*span));
       // Turn outside the frame so a fish never flips while it is visible.
       const cycle=progress<=span?-margin+progress:1+margin-(progress-span);
-      const heading=turn%2===0?f.direction:-f.direction;
+      let heading=turn%2===0?f.direction:-f.direction;
       // Change species only during an unseen turn.
       if(f.turn!==undefined&&f.turn!==turn&&f.pool){
         const available=f.pool.filter(kind=>sprites[kind]);
@@ -207,18 +328,104 @@ export function createAquariumLayer(container, backdropURL = '', fishURL = '', r
       const beat=beatTime*profile.hz*f.tailRate*Math.PI*2+f.phase;
       const pathRate=.28+f.tailRate*.06,pathPhase=time*pathRate+f.phase;
       const arc=profile.arc;
-      const x = cycle * w, y = (f.y + Math.sin(pathPhase)*arc+Math.sin(pathPhase*.47+f.phase)*arc*.35) * h;
+      let x = cycle * w, y = (f.y + Math.sin(pathPhase)*arc+Math.sin(pathPhase*.47+f.phase)*arc*.35) * h;
       const verticalSpeed=h*arc*pathRate*(Math.cos(pathPhase)+.35*.47*Math.cos(pathPhase*.47+f.phase));
-      const pitch=Math.max(-.14,Math.min(.14,Math.atan2(verticalSpeed,w*f.speed*drive)));
+      let pitch=Math.max(-.14,Math.min(.14,Math.atan2(verticalSpeed,w*f.speed*drive)));
       const texture=sprites[kind][variant][0];
       const height = width * texture.height / texture.width;
+      if(f.food&&!pellets.includes(f.food))f.food=null;
+      if(f.food&&!f.forage&&time>=(f.noticeAt||0)){
+        f.forage={x:f.screen?.x??x,y:f.screen?.y??y,angle:heading>0?pitch:Math.PI-pitch,
+          speed:w*f.speed,stage:'approach',at:time,approachAt:time,homeY:f.y,w,h};
+      }
+      if(f.forage){
+        const g=f.forage;
+        if(g.w!==w||g.h!==h){g.x*=w/g.w;g.y*=h/g.h;g.w=w;g.h=h;}
+        const nose=width*.40,cruiseSpeed=w*f.speed;
+        let wantedAngle=g.angle,wantedSpeed=cruiseSpeed;
+        if(f.food){
+          const p=f.food;
+          const mouthX=g.x+Math.cos(g.angle)*nose,mouthY=g.y+Math.sin(g.angle)*nose;
+          const mouthDistance=Math.hypot(p.x*w-mouthX,p.y*h-mouthY);
+          const targetAngle=Math.atan2(p.y*h-g.y,p.x*w-g.x);
+          const alignment=Math.abs(wrapAngle(targetAngle-g.angle));
+          wantedAngle=targetAngle;
+          // Approach with bounded turning and acceleration. Brake before the
+          // short suction strike, instead of swallowing food through the belly.
+          wantedSpeed=clamp(mouthDistance*1.25,14*unit,(55+width/unit*.45)*unit)*Math.max(.18,1-alignment/Math.PI);
+          if(g.stage==='approach'&&!p.winner&&mouthDistance<18*unit&&alignment<.30){p.winner=f;g.stage='strike';g.strikeAt=time;}
+          if(g.stage==='strike'&&p.winner===f){
+            wantedSpeed=8*unit;p.suction=true;
+            const pull=1-Math.exp(-foodDt*15);
+            p.x+=(mouthX/w-p.x)*pull;p.y+=(mouthY/h-p.y)*pull;
+            if(time-g.strikeAt>.16&&mouthDistance<10*unit){
+              lastCapture={mouthDistance:mouthDistance/unit,bodyLength:width/unit,kind,manual:p.manual};
+              // Resolve once. Other contenders coast toward the now-empty spot,
+              // pause in surprise, then leave with a disappointed expression.
+              pellets.splice(pellets.indexOf(p),1);
+              for(const other of [...p.contenders])if(other!==f)loseFood(other,true);
+              p.contenders=[];f.food=null;p.winner=null;
+              f.reaction={tier:p.tier,at:time};eaten[p.tier]++;f.foodCooldown=time+6;
+              g.stage='depart';g.at=time;
+            }
+          }
+          if(f.food&&g.stage==='approach'&&time-g.approachAt>11)loseFood(f,false);
+        }else{
+          if(g.stage!=='depart'&&g.stage!=='missed'){g.stage='depart';g.at=time;}
+          const side=Math.cos(g.angle)>=0?1:-1;
+          // Coast away and arc back into open water, then rebase the patrol at
+          // the exact current position so there is no elastic snap home.
+          const depthError=clamp(g.homeY,.16,.86)*h-g.y;
+          wantedAngle=time-g.at<.65?(side>0?.25:Math.PI-.25):Math.atan2(depthError,side*w*.07);
+          wantedSpeed=time-g.at<.35?cruiseSpeed*.4:cruiseSpeed+Math.min(70*unit,Math.abs(depthError)*.9);
+          if(g.stage==='missed'&&time-g.at<.85){
+            wantedAngle=g.angle;wantedSpeed=time-g.at<.25?g.speed*.65:0;
+          }else if(g.stage==='missed'){g.stage='depart';g.at=time;}
+        }
+        // Long-bodied fish need a wider arc and more time to rotate.
+        const turnRate=kind==='arowana'?1.15:kind==='seahorse'?1.5:2.1;
+        const angleStep=clamp(wrapAngle(wantedAngle-g.angle),-foodDt*turnRate,foodDt*turnRate);
+        g.angle+=angleStep;g.speed+=clamp(wantedSpeed-g.speed,-unit*(kind==='arowana'?85:130)*foodDt,unit*(kind==='arowana'?55:95)*foodDt);
+        g.x+=Math.cos(g.angle)*g.speed*foodDt;g.y+=Math.sin(g.angle)*g.speed*foodDt;
+        x=g.x;y=g.y;heading=Math.cos(g.angle)>=0?1:-1;
+        pitch=Math.atan2(Math.sin(g.angle),Math.abs(Math.cos(g.angle)));
+        // Pitch rotates the intact side profile; it is not a camera yaw.
+        // Preserve body proportions even during a steep ascent.
+        if(!f.food&&time-g.at>1.8&&Math.abs(g.y-clamp(g.homeY,.16,.86)*h)<h*.035&&Math.abs(Math.sin(g.angle))<.20){
+          f.direction=heading;f.x=x/w-heading*cruise*f.speed;
+          f.y=y/h-Math.sin(pathPhase)*arc-Math.sin(pathPhase*.47+f.phase)*arc*.35;
+          f.turn=0;f.forage=null;
+        }
+      }
+      f.screen={x,y,heading};
+      const reaction=f.reaction,age=reaction?time-reaction.at:99;
+      if(reaction&&age<5){
+        if(reaction.tier==='astra')y-=Math.sin(Math.min(1,age/5)*Math.PI)*h*.018;
+        if(reaction.tier==='terra')y+=Math.sin(age*15)*unit*2;
+        if(reaction.tier==='luna'){
+          y+=Math.sin(age*11)*unit*4;
+          if(age>.7&&!reaction.vomited){reaction.vomited=true;vomitBursts++;effects.push({x:(x+heading*Math.cos(pitch)*width*.4)/w,y:(y+Math.sin(pitch)*width*.4)/h,angle:heading>0?pitch:Math.PI-pitch,at:time});}
+        }
+      }
       // Paint opaque fish from far to near so the nearer body occludes the farther one.
       context.save(); context.globalAlpha = 1;
       context.translate(x,y); context.scale(heading, 1);
       context.rotate(pitch+Math.sin(beat)*(['puffer','seahorse'].includes(kind)?.003:.009));
       const pose=Math.floor(((beat/(Math.PI*2))%1+1)%1*poseCount);
+      if(age<5&&reaction?.tier==='luna')context.filter='sepia(1) saturate(3) hue-rotate(45deg)';
+      if(age<5&&reaction?.tier==='astra'){context.shadowColor='#ffe598';context.shadowBlur=18*unit;}
       context.drawImage(sprites[kind][variant][pose],-width / 2,-height / 2,width,height); context.restore();
+      const disappointed=f.disappointment,disappointedAge=disappointed?time-disappointed.at:99;
+      if(disappointedAge>=0&&disappointedAge<2.6){
+        context.save();context.globalAlpha=Math.min(1,(2.6-disappointedAge)*2)*.35;
+        emoji('🥺💨',Math.max(40*unit,Math.min(w-40*unit,x)),Math.max(24*unit,y-height/2-12*unit),unit);context.restore();
+      }
+      if(age<5&&reaction){
+        context.save();context.globalAlpha=Math.min(1,(5-age)*2)*.35;
+        emoji(reactionEmoji[reaction.tier],Math.max(75*unit,Math.min(w-75*unit,x)),Math.max(24*unit,y-height/2-12*unit),unit);context.restore();
+      }
     }
+    drawFood(w,h,unit);
     for (const b of bubbles) {
       const progress = (b.phase + time * b.speed) % 1;
       const x = (b.x + Math.sin(time * .55 + b.sway) * .008) * w;
@@ -251,6 +458,7 @@ export function createAquariumLayer(container, backdropURL = '', fishURL = '', r
   document.addEventListener('visibilitychange',visibility);
   reduced.addEventListener('change',visibility);
   return {
+    feed,previewFood,
     setFishCount(value) { if(!disposed&&population(value)&&active)sync(true); },
     setBackdrop(url,id='original') {
       if(disposed||!url)return;
@@ -272,9 +480,15 @@ export function createAquariumLayer(container, backdropURL = '', fishURL = '', r
       canvasWidth:canvas?.width || 0,canvasHeight:canvas?.height || 0,fishCount:fish.length,bubbleCount:bubbles.length,hasBackdrop:!!plate,backdropId,fishReady,fishError,
       speciesCount:Object.keys(sprites||{}).filter(kind=>kind!=='bubble').length,
       speciesInScene:[...new Set(fish.map(f=>f.kind))],fishOcclusion:'opaque-far-to-near',
+      feeding:{receivedTokens,droppedFood,manualPellets,vomitBursts,lastCapture,pellets:pellets.length,eaten:{...eaten},
+        motionModel:'contest-strike-miss-retreat',competition:{maxContenders:3,contestedPellets,lostRaces,missedAttempts,expiredFood,
+          chasing:pellets.map(p=>p.contenders.length),disappointed:fish.filter(f=>f.disappointment&&time>=f.disappointment.at&&time-f.disappointment.at<2.6).length},foodShape:'engraved-token-chip',reactionEmoji:{...reactionEmoji},
+        foraging:fish.filter(f=>f.forage).length,
+        reactions:fish.filter(f=>f.reaction&&time-f.reaction.at<5).map(f=>f.reaction.tier)},
+      ornamentCache:{entries:ornamentCache.size,kiB:Number((ornamentBytes/1024).toFixed(1))},
       spriteMiB:Number((spriteBytes/1048576).toFixed(2))}),
     dispose() {
-      disposed = true; stop(); observer?.disconnect();
+      disposed = true;for(const item of ornamentCache.values()){item.width=0;item.height=0;}ornamentCache.clear();ornamentBytes=0;pellets.length=0;effects.length=0;stop(); observer?.disconnect();
       document.removeEventListener('visibilitychange',visibility); reduced.removeEventListener('change',visibility);
       for(const atlas of atlasImages){atlas.onload=null;atlas.onerror=null;atlas.src='';}atlasImages.clear();
       canvas?.remove(); plate?.remove(); sprites = null; context = null;
