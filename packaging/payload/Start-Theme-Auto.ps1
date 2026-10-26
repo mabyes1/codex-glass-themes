@@ -6,7 +6,8 @@ $stopFile=Join-Path $runtime 'stop'
 $pidFile=Join-Path $runtime 'watcher.pid'
 if($Stop){[IO.File]::WriteAllText($stopFile,'stop');exit 0}
 $mutex=[Threading.Mutex]::new($false,'Local\CodexGlassThemeAutoAttach')
-if(!$mutex.WaitOne(0)){$mutex.Dispose();exit 0}
+try{$acquired=$mutex.WaitOne(0)}catch [Threading.AbandonedMutexException]{$acquired=$true}
+if(!$acquired){$mutex.Dispose();exit 0}
 $source=Join-Path $PSScriptRoot 'theme'
 $hostScript=Join-Path $source 'theme-host.mjs'
 $hostPidFile=Join-Path $source '.runtime\host.pid'
@@ -14,6 +15,8 @@ $lastState=''
 $lastAcceptedMain=0
 $lastVerifiedAt=[DateTime]::MinValue
 $lastAttachKey=''
+$launchedHelper=$null
+. (Join-Path $PSScriptRoot 'Get-ThemeHelperProcess.ps1')
 . (Join-Path $PSScriptRoot 'Package-Runtime.ps1')
 . (Join-Path $PSScriptRoot 'Get-CodexAttachState.ps1')
 Write-CodexStartupTrace 'watcher' 'start'
@@ -36,15 +39,11 @@ try{
     while(!(Test-Path -LiteralPath $stopFile)){
         try{
             try{Sync-PackageThemeHook}catch{Write-State ('Package hook: '+$_.Exception.Message)}
-            $hostProcess=$null
-            if(Test-Path -LiteralPath $hostPidFile){
-                $hostId=0
-                if([int]::TryParse((Get-Content -LiteralPath $hostPidFile -Raw).Trim(),[ref]$hostId)){
-                    $candidate=Get-CimInstance Win32_Process -Filter "ProcessId=$hostId" -ErrorAction SilentlyContinue
-                    if($candidate.Name -eq 'node.exe' -and $candidate.CommandLine -like ('*'+$hostScript+'*')){$hostProcess=$candidate}
-                }
+            $hostProcess=Get-ThemeHelperProcess -HostScript $hostScript -HostPidFile $hostPidFile -LaunchedProcess $launchedHelper
+            if($hostProcess){
+                $runningId=if($hostProcess -is [Diagnostics.Process]){$hostProcess.Id}else{$hostProcess.ProcessId}
+                Write-State ('Theme helper running: PID '+$runningId)
             }
-            if($hostProcess){Write-State ('Theme helper running: PID '+$hostProcess.ProcessId)}
             else{
                 $codex=@(Get-CodexProcesses)
                 if(!$codex.Count){Write-State 'Waiting for ChatGPT'}
@@ -53,6 +52,7 @@ try{
                     if(!$port){Write-State 'ChatGPT is open; waiting for usable CDP'}
                     else{
                         $helper=Start-Process -FilePath $node -ArgumentList @('"'+$hostScript+'"') -WindowStyle Hidden -WorkingDirectory $source -RedirectStandardOutput (Join-Path $runtime 'host.log') -RedirectStandardError (Join-Path $runtime 'host-error.log') -PassThru
+                        $launchedHelper=$helper
                         Write-State ('Started theme helper: PID '+$helper.Id+', CDP '+$port)
                     }
                 }

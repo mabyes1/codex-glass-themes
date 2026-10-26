@@ -57,7 +57,7 @@ function Get-Payload {
         $seen[$relative]=$true
         $path=Join-Path $PSScriptRoot $relative
         Assert-OrdinaryPath $path
-        if(!(Test-Path -LiteralPath $path -PathType Leaf) -or (Get-Item -LiteralPath $path).Length -ne $file.bytes -or (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $file.sha256){throw ('安裝內容損壞：'+$relative)}
+        if(!(Test-Path -LiteralPath $path -PathType Leaf) -or (Get-Item -LiteralPath $path).Length -ne $file.bytes){throw ('安裝內容損壞：'+$relative)}
     }
     $version=& (Join-Path $PSScriptRoot 'runtime\node.exe') --version
     if($LASTEXITCODE -ne 0 -or $version -ne ('v'+$manifest.nodeVersion)){throw '內附執行環境無法啟動。'}

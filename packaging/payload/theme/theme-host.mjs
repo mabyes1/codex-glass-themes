@@ -12,13 +12,17 @@ import {startBackdropWatch} from './native-watch.mjs';
 import {getWindowsAppearancePolicy} from './windows-compat.mjs';
 import {release,homedir} from 'node:os';
 import {createTokenFeed} from './token-feed.mjs';
-const tokenFeed=createTokenFeed(join(process.env.CODEX_HOME||join(homedir(),'.codex'),'sessions'));
-await tokenFeed.poll();
+import {acquireHostLease} from './host-lease.mjs';
 const compatibility=getWindowsAppearancePolicy(release()).compatibility;
 const exec=promisify(execFile),dir=dirname(fileURLToPath(import.meta.url)),runtime=join(dir,'.runtime');
 await mkdir(runtime,{recursive:true});
+const hostLease=await acquireHostLease(runtime);
+if(!hostLease){console.log('Theme helper already running');process.exit(0);}
+try {
 const stopFile=join(runtime,'stop'),pidFile=join(runtime,'host.pid');
-await unlink(stopFile).catch(()=>{});await writeFile(pidFile,String(process.pid));
+await unlink(stopFile).catch(()=>{});
+const tokenFeed=createTokenFeed(join(process.env.CODEX_HOME||join(homedir(),'.codex'),'sessions'),{cursorPath:join(runtime,'token-cursors.json')});
+await tokenFeed.poll();
 const css=await readFile(join(dir,'glass.css'),'utf8');
 const panelCss=await readFile(join(dir,'theme-panel.css'),'utf8');
 const aquariumImage=await Promise.all(aquariumBackdrops.map(async scene=>({...scene,url:'data:image/png;base64,'+(await readFile(join(dir,'assets',scene.file))).toString('base64')})));
@@ -162,5 +166,6 @@ try{
   await call('Runtime.removeBinding',{name:'__kenGlassNativeCheck'}).catch(()=>{});
   await call('Emulation.setDefaultBackgroundColorOverride',{}).catch(()=>{});
  }
- await native('restore').catch(()=>{});socket?.close();await unlink(pidFile).catch(()=>{});console.log('Original appearance restored');
+ await native('restore').catch(()=>{});socket?.close();console.log('Original appearance restored');
 }
+} finally {await hostLease.release();}

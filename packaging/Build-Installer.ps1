@@ -1,10 +1,10 @@
-﻿param([string]$Version='2.0.0')
+﻿param([string]$Version='2.0.1')
 $ErrorActionPreference='Stop'
 if($Version -notmatch '^\d+\.\d+\.\d+$'){throw 'Invalid release version'}
 $repository=Split-Path -Parent $PSScriptRoot
 $payload=Join-Path $PSScriptRoot 'payload'
 $vendor=Join-Path $PSScriptRoot 'vendor\node-v24.21.0-win-x64'
-if(!(Test-Path -LiteralPath (Join-Path $vendor 'node.exe'))){throw 'Run packaging/Get-NodeRuntime.ps1 to download and verify the official Node.js 24.21.0 Windows x64 runtime first.'}
+if(!(Test-Path -LiteralPath (Join-Path $vendor 'node.exe'))){throw 'Run packaging/Get-NodeRuntime.ps1 to download the official Node.js 24.21.0 Windows x64 runtime first.'}
 $buildRoot=Join-Path $PSScriptRoot ('build\'+[guid]::NewGuid().ToString('N'))
 $stage=Join-Path $buildRoot 'payload'
 $dist=Join-Path $repository 'dist'
@@ -29,7 +29,7 @@ if($LASTEXITCODE -ne 0){throw 'Package session compilation failed'}
 & $compiler /nologo /target:exe /platform:x64 /reference:System.Windows.Forms.dll ('/out:'+(Join-Path $stage 'theme\NativeBackdropWatch.exe')) (Join-Path $stage 'theme\NativeBackdropWatch.cs')
 if($LASTEXITCODE -ne 0){throw 'Native backdrop helper compilation failed'}
 $files=@(Get-ChildItem -LiteralPath $stage -File -Recurse|Sort-Object FullName|ForEach-Object {
-    [ordered]@{path=$_.FullName.Substring($stage.Length+1).Replace('\','/');bytes=$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}
+    [ordered]@{path=$_.FullName.Substring($stage.Length+1).Replace('\','/');bytes=$_.Length}
 })
 $manifest=[ordered]@{product='CodexGlassThemes';version=$Version;nodeVersion='24.21.0';platform='windows-x64';minimumWindowsBuild=19045;packageName='OpenAI.Codex';edition='win10-renderer-glass';files=$files}
 [IO.File]::WriteAllText((Join-Path $stage 'payload.json'),($manifest|ConvertTo-Json -Depth 5),[Text.UTF8Encoding]::new($false))

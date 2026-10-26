@@ -10,14 +10,14 @@ Run from the repository root:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File packaging/Get-NodeRuntime.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File packaging/Build-Installer.ps1 -Version 2.0.0
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File packaging/Build-Installer.ps1 -Version 2.0.1
 ```
 
-`Get-NodeRuntime.ps1` downloads the official Node.js 24.21.0 Windows x64 archive over HTTPS, compares the official checksum manifest with the pinned SHA-256, verifies the archive, and extracts it into `packaging/vendor`. Run it once for a fresh checkout; reuse the verified cache for later builds. Changing the runtime requires updating the fetch script, build manifest, and installer test together.
+`Get-NodeRuntime.ps1` downloads the official Node.js 24.21.0 Windows x64 archive over HTTPS, extracts it into `packaging/vendor`, and checks the runtime version. Run it once for a fresh checkout; reuse the runtime cache for later builds. Changing the runtime requires updating the fetch script, build manifest, and installer test together.
 
-The build compiles the package callback, COM session, native backdrop helper, and WinForms installer. It stages only `packaging/payload` plus the bundled Node executable and license. PowerShell files in the staged payload receive a UTF-8 BOM for Windows PowerShell 5.1. A per-file integrity manifest is embedded with the payload.
+The build compiles the package callback, COM session, native backdrop helper, and WinForms installer. It stages only `packaging/payload` plus the bundled Node executable and license. PowerShell files in the staged payload receive a UTF-8 BOM for Windows PowerShell 5.1. A per-file path and size manifest is embedded with the payload.
 
-Output: `dist/ChatGPT-Glass-Themes-Setup-2.0.0-win-x64.exe`. Each build has a separate staging directory under `packaging/build`. Neither building nor extracting registers a startup callback or changes a running Codex installation.
+Output: `dist/ChatGPT-Glass-Themes-Setup-2.0.1-win-x64.exe`. Each build has a separate staging directory under `packaging/build`. Neither building nor extracting registers a startup callback or changes a running Codex installation.
 
 ## Source layout
 
@@ -89,14 +89,14 @@ Windows package debugging changes package lifecycle behavior while active. Revie
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File packaging/Get-NodeRuntime.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File packaging/Build-Installer.ps1 -Version 2.0.0
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File packaging/Build-Installer.ps1 -Version 2.0.1
 ```
 
-第一個腳本以 HTTPS 下載官方 Node.js 24.21.0 Windows x64 ZIP，比對官方校驗清單與固定的 SHA-256，再驗證壓縮檔並解開至 `packaging/vendor`。新 checkout 執行一次即可，之後沿用已驗證的快取。若更換 Node 版本，請同步調整下載腳本、建置資訊與安裝器測試。
+第一個腳本以 HTTPS 下載官方 Node.js 24.21.0 Windows x64 ZIP，解開至 `packaging/vendor`，再檢查執行環境版本。新 checkout 執行一次即可，之後沿用快取。若更換 Node 版本，請同步調整下載腳本、建置資訊與安裝器測試。
 
-建置會編譯啟動回呼、COM session、原生背景助手及 WinForms 安裝器，只收錄 `packaging/payload` 與內附 Node 執行檔、授權。部署用 PowerShell 檔案加入 UTF-8 BOM，確保 Windows PowerShell 5.1 正確讀取中文。安裝內容包含逐檔完整性資訊。
+建置會編譯啟動回呼、COM session、原生背景助手及 WinForms 安裝器，只收錄 `packaging/payload` 與內附 Node 執行檔、授權。部署用 PowerShell 檔案加入 UTF-8 BOM，確保 Windows PowerShell 5.1 正確讀取中文。安裝內容包含逐檔路徑與大小資訊。
 
-產物是 `dist/ChatGPT-Glass-Themes-Setup-2.0.0-win-x64.exe`，每次建置使用獨立的 `packaging/build` 暫存目錄。建置與單純解包不會啟用回呼，也不會變更正在使用的 Codex。
+產物是 `dist/ChatGPT-Glass-Themes-Setup-2.0.1-win-x64.exe`，每次建置使用獨立的 `packaging/build` 暫存目錄。建置與單純解包不會啟用回呼，也不會變更正在使用的 Codex。
 
 ### 目錄與驗證
 

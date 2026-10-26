@@ -2,7 +2,7 @@
 
 **Soft glass. Your colors. A whole ocean of ideas.**
 
-[English](README.md) · [繁體中文](README.zh-TW.md) · [Download v2.0.0 EXE](https://github.com/mabyes1/codex-glass-themes/releases/download/v2.0.0/ChatGPT-Glass-Themes-Setup-2.0.0-win-x64.exe) · [Build from source](packaging/README.md)
+[English](README.md) · [繁體中文](README.zh-TW.md) · [Download v2.0.1 EXE](https://github.com/mabyes1/codex-glass-themes/releases/download/v2.0.1/ChatGPT-Glass-Themes-Setup-2.0.1-win-x64.exe) · [Build from source](packaging/README.md)
 
 Make the Windows Codex app feel like your workspace. Choose clear glass, a favorite image, a quiet aquarium, or the Milky Way. Keep text readable, save your preferences, and launch Codex from its usual icon.
 
@@ -10,6 +10,12 @@ Make the Windows Codex app feel like your workspace. Choose clear glass, a favor
 
 *The actual Windows Codex app, showing a [demo document](docs/demo.md). Four ocean scenes, adjustable fish density, and a pause control live in the theme panel.*
 
+
+## v2.0.1: Prevent runaway background helpers
+
+A very large session could delay startup long enough for the watcher to repeatedly launch new helpers. This update claims a single-instance lock and registers the PID before initialization, remembers helpers still starting, and saves a separate token-reading checkpoint for each session. Uncached history reads only its last 256 KiB; all sessions share a 2 MiB read budget per poll.
+
+**Existing v2.0.0 installation:** [Download the repair ZIP](https://github.com/mabyes1/codex-glass-themes/releases/download/v2.0.1/glass-theme-helper-repair-2.0.1.zip), extract it, and run `Repair.cmd` using the Windows account that installed the theme. It backs up changed files and removes only that installation's duplicate helpers, keeping Codex, preferences, and wallpaper in place. [Release notes and custom paths](docs/releases/v2.0.1.md).
 
 ## v2.0.0: Feed the fish with your tokens
 
@@ -53,19 +59,19 @@ You need the official **Windows x64 Codex package, `OpenAI.Codex`**, installed f
 
 | Version | Windows support |
 | --- | --- |
-| **v2.0.0 / latest source** | Windows 10 22H2 / Windows 11, build 19045+. Builds below 22621 use an opaque renderer with simulated glass. |
+| **v2.0.1 / latest source** | Windows 10 22H2 / Windows 11, build 19045+. Builds below 22621 use an opaque renderer with simulated glass. |
 | **Older v1.2.0 installer** | Windows 11 x64, build 22621+. This older installer does not contain the Windows 10 fallback. |
 
 Windows 11 build 22621+ uses native background effects. On older supported builds, the compatibility mode softens the theme inside the window; it does not blur the desktop. ARM64 is not supported by this installer.
 
-1. [Download the v2.0.0 installer](https://github.com/mabyes1/codex-glass-themes/releases/download/v2.0.0/ChatGPT-Glass-Themes-Setup-2.0.0-win-x64.exe), or [build from source](packaging/README.md).
+1. [Download the v2.0.1 installer](https://github.com/mabyes1/codex-glass-themes/releases/download/v2.0.1/ChatGPT-Glass-Themes-Setup-2.0.1-win-x64.exe), or [build from source](packaging/README.md).
 2. Run the installer under your normal Windows account. Click **「安裝並啟用」** — Install and enable. The default folder is `%USERPROFILE%\CodexGlass`.
 3. If Codex was already running during installation, finish your work and **fully quit it once**, then reopen it from its usual Start menu or taskbar icon.
 4. Click **「佈景」** — Theme — near the top of the window. Choose a mode and make it yours.
 
 The installer includes Node.js; end users do not need developer tools. It runs without administrator elevation and is currently unsigned, so Windows may show an unknown-publisher warning. Keep the installation folder in place while using the theme.
 
-Already using another version or a development helper? Remove it with its own uninstaller or restore script first. The installer reports conflicting startup/debugger settings instead of overwriting another installation.
+For the v2.0.0 → v2.0.1 helper fix, use the repair ZIP above. Already using another version or a development helper? Remove it with its own uninstaller or restore script first. The installer reports conflicting startup/debugger settings instead of overwriting another installation.
 
 ## A few useful controls
 
@@ -79,7 +85,7 @@ Preferences stay in the existing Codex browser profile. Wallpaper data stays in 
 
 The helper discovers the installed Codex package and checks for updates every five seconds. New source builds start the helper at sign-in and include a one-minute recovery trigger if it exits. A process that started before the callback was ready may still need one full close/reopen; that diagnosis should be based on missing CDP arguments, not a slow-loading window.
 
-Theme-tool updates currently use **uninstall, then reinstall**. Open **Settings → Apps → Installed apps → ChatGPT Glass Themes（Codex） → Uninstall**, then install the newer build. Saved preferences and wallpaper remain in Codex's profile. Uninstall before moving or deleting the installation folder.
+The v2.0.1 repair ZIP updates an existing v2.0.0 installation in place. Other full theme-tool updates currently use **uninstall, then reinstall**. Open **Settings → Apps → Installed apps → ChatGPT Glass Themes（Codex） → Uninstall**, then install the newer build. Saved preferences and wallpaper remain in Codex's profile. Uninstall before moving or deleting the installation folder.
 
 ## If the theme is missing
 

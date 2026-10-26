@@ -2,7 +2,7 @@
 
 **一點玻璃、一點色彩，讓工作空間更像你。**
 
-[English](README.md) · [繁體中文](README.zh-TW.md) · [下載 v2.0.0 EXE](https://github.com/mabyes1/codex-glass-themes/releases/download/v2.0.0/ChatGPT-Glass-Themes-Setup-2.0.0-win-x64.exe) · [從原始碼建置](packaging/README.md#繁體中文)
+[English](README.md) · [繁體中文](README.zh-TW.md) · [下載 v2.0.1 EXE](https://github.com/mabyes1/codex-glass-themes/releases/download/v2.0.1/ChatGPT-Glass-Themes-Setup-2.0.1-win-x64.exe) · [從原始碼建置](packaging/README.md#繁體中文)
 
 替 Windows Codex 換上喜歡的氣氛：清透玻璃、自己的照片、安靜的深海，或緩緩流動的銀河。背景可以有個性，文字依然清楚；設定會自動保存，平常照樣使用原本的 Codex 圖示開啟。
 
@@ -10,6 +10,12 @@
 
 *實際 Windows Codex 介面，畫面中是公開的[示範文件](docs/demo.md)。四種海底場景、魚群密度與暫停開關，都在同一個面板裡。*
 
+
+## v2.0.1：修正背景助手越開越多
+
+大型聊天紀錄可能拖慢助手啟動，讓外層監看程式反覆開出新助手。這版在初始化前就取得單一實例鎖、登記 PID，也會記住正在啟動的程序。Token 讀取進度按 session 保存；沒有進度的舊紀錄只讀最後 256 KiB，所有 session 每輪合計最多讀 2 MiB。
+
+**已安裝 v2.0.0：** [下載修復 ZIP](https://github.com/mabyes1/codex-glass-themes/releases/download/v2.0.1/glass-theme-helper-repair-2.0.1.zip)，解壓縮後，用原本安裝佈景的 Windows 帳戶執行 `Repair.cmd`。工具會備份修改的檔案、清掉該安裝的重複助手，保留 Codex、主題偏好與桌布。[更新說明與自訂路徑用法](docs/releases/v2.0.1.md)。
 
 ## v2.0.0：燒掉的 token，拿來餵魚
 
@@ -53,19 +59,19 @@
 
 | 版本 | Windows 支援範圍 |
 | --- | --- |
-| **v2.0.0／最新原始碼** | Windows 10 22H2 / Windows 11，組建 19045 以上。低於 22621 使用不透明視窗內的模擬玻璃。 |
+| **v2.0.1／最新原始碼** | Windows 10 22H2 / Windows 11，組建 19045 以上。低於 22621 使用不透明視窗內的模擬玻璃。 |
 | **較舊的 v1.2.0 安裝檔** | Windows 11 x64，組建 22621 以上。這份舊安裝檔尚未包含 Windows 10 相容模式。 |
 
 Windows 11 22621 以上使用原生背景效果。較舊的支援版本會柔化視窗內的佈景，不會透出或模糊桌面。此安裝包不支援 ARM64。
 
-1. [下載 v2.0.0 安裝檔](https://github.com/mabyes1/codex-glass-themes/releases/download/v2.0.0/ChatGPT-Glass-Themes-Setup-2.0.0-win-x64.exe)，或[從原始碼建置](packaging/README.md#繁體中文)。
+1. [下載 v2.0.1 安裝檔](https://github.com/mabyes1/codex-glass-themes/releases/download/v2.0.1/ChatGPT-Glass-Themes-Setup-2.0.1-win-x64.exe)，或[從原始碼建置](packaging/README.md#繁體中文)。
 2. 使用自己的普通 Windows 帳戶執行，按 **「安裝並啟用」**。預設位置是 `%USERPROFILE%\CodexGlass`。
 3. 若安裝時 Codex 已經在執行，先完成手上的工作，再**完整退出一次**，然後從原本的開始功能表或工作列圖示開啟。
 4. 點視窗上方的 **「佈景」**，選擇喜歡的模式。
 
 安裝包已內附 Node.js，一般使用者不必安裝開發工具，也不需要管理員權限。安裝程式目前尚未簽署，Windows 可能顯示未知的發行者。使用期間請保留安裝目錄。
 
-已經使用其他版本或開發助手？請先用原安裝的移除或還原功能解除。遇到其他安裝留下的登入或除錯設定，安裝器會顯示衝突，不直接覆寫。
+v2.0.0 升級這份助手修正，使用上面的修復 ZIP。已經使用其他版本或開發助手？請先用原安裝的移除或還原功能解除。遇到其他安裝留下的登入或除錯設定，安裝器會顯示衝突，不直接覆寫。
 
 ## 幾個好用的控制項
 
@@ -79,7 +85,7 @@ Windows 11 22621 以上使用原生背景效果。較舊的支援版本會柔化
 
 助手每五秒查詢官方 Codex 套件及更新狀態。最新原始碼會在登入時啟動助手，並提供每分鐘的恢復觸發，避免助手結束後一直離線。如果 Codex 比回呼更早啟動，該實例仍可能需要完整退出再開；應先確認它真的缺少 CDP 啟動參數，不能只因視窗載入比較慢就要求重開。
 
-主題工具目前採 **先解除安裝，再安裝新版**。到 **設定 → 應用程式 → 已安裝的應用程式 → ChatGPT Glass Themes（Codex）→ 解除安裝**，再執行新安裝檔。個人配色與圖片會保留在 Codex 資料中。移動或刪除安裝目錄前，請先解除安裝。
+v2.0.1 修復 ZIP 可直接更新現有 v2.0.0 安裝。其他完整版本更新目前採 **先解除安裝，再安裝新版**。到 **設定 → 應用程式 → 已安裝的應用程式 → ChatGPT Glass Themes（Codex）→ 解除安裝**，再執行新安裝檔。個人配色與圖片會保留在 Codex 資料中。移動或刪除安裝目錄前，請先解除安裝。
 
 ## 主題沒出現時
 
