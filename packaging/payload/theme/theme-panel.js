@@ -57,9 +57,14 @@ function installUsageShortcuts() {
       shadow.getElementById('reset').title = error.message;
     } finally { busy = false; }
   }
+  function usageQuery() {
+    const queries = client.getQueryCache().findAll({queryKey:['rate-limit-status']})
+      .filter(q => q.queryKey[1] !== 'image-generation' && q.state.data?.rate_limit);
+    return queries.find(q => q.getObserversCount() > 0) || queries.find(q => q.queryKey.length === 1);
+  }
   function render() {
     if (disposed || !client) return;
-    const query = client.getQueryCache().find({queryKey:['rate-limit-status'],exact:true});
+    const query = usageQuery();
     const data = query?.state.data;
     updatedAt = query?.state.dataUpdatedAt || 0;
     for (const [id,win] of [['primary',data?.rate_limit?.primary_window],['weekly',data?.rate_limit?.secondary_window]]) {
@@ -81,13 +86,14 @@ function installUsageShortcuts() {
     const next = discoverClient();
     if (next && next !== client) {
       unsubscribe?.(); client = next;
-      unsubscribe = client.getQueryCache().subscribe(event => {if(event.query?.queryKey?.length === 1 && event.query.queryKey[0] === 'rate-limit-status') render();});
+      unsubscribe = client.getQueryCache().subscribe(event => {if(event.query?.queryKey?.[0] === 'rate-limit-status') render();});
     }
     render();
   }
   function refresh() {
     connect();
-    if (client && !document.hidden && Date.now()-updatedAt>60000) client.refetchQueries({queryKey:['rate-limit-status'],exact:true}).catch(()=>{});
+    const query = client && usageQuery();
+    if (query && !document.hidden && Date.now()-updatedAt>60000) client.refetchQueries({queryKey:query.queryKey,exact:true,type:'active'}).catch(()=>{});
   }
   shadow.getElementById('primary').onclick = () => openNative();
   shadow.getElementById('weekly').onclick = () => openNative();

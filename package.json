@@ -1,6 +1,6 @@
 {
   "name": "codex-glass-themes",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "private": true,
   "description": "One-time Windows installer for automatic Codex glass themes, color presets and local image backgrounds.",
   "type": "module",
