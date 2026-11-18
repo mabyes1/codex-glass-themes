@@ -45,6 +45,25 @@ function Clear-PackageThemeHook([switch]$AllowRemovedPackage) {
     $script:activePackage=''
     Write-PackageThemeStatus 'stopped' 'Package debug session released'
 }
+function Test-ProtectedThemeEntryHook($package) {
+    $key='HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\ChatGPT.exe'
+    $filter=Get-Item -LiteralPath $key -ErrorAction SilentlyContinue
+    $hook=Get-Item -LiteralPath "$key\CodexGlassTheme" -ErrorAction SilentlyContinue
+    if(!$filter -or $filter.GetValue('UseFilter',0) -ne 1 -or !$hook){return $false}
+    $image=Join-Path $package.InstallLocation 'app\ChatGPT.exe'
+    $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+    $runtime=Join-Path $env:ProgramData "CodexThemeBridge-$sid\.runtime-ifeo"
+    $relay=Join-Path $runtime 'IfeoAliasRelay.exe'
+    $config=Join-Path $runtime 'chatgpt-hook-config.json'
+    $expected='"'+$relay+'" --config "'+$config+'"'
+    return (
+        $hook.GetValue('FilterFullPath') -eq $image -and
+        $hook.GetValue('Debugger') -eq $expected -and
+        (Test-Path -LiteralPath $relay -PathType Leaf) -and
+        (Test-Path -LiteralPath $config -PathType Leaf)
+    )
+}
+
 function Sync-PackageThemeHook {
     if(!(Test-Path -LiteralPath $script:packageHookDebugger)){
         if($script:packageSession){Clear-PackageThemeHook}
@@ -52,6 +71,17 @@ function Sync-PackageThemeHook {
     }
     $package=Get-CodexInstalledPackage
     if(!$package){if($script:packageSession){Clear-PackageThemeHook};return}
+    if(Test-ProtectedThemeEntryHook $package){
+        # Package-wide debugging suspends other tools launched in the Codex
+        # package, including Cockpit Tools' account-switch launcher.
+        if($script:packageSession){Clear-PackageThemeHook -AllowRemovedPackage}
+        if($script:activePackage -ne $package.PackageFullName){
+            Disable-OwnedPackageThemeHook $package.PackageFullName|Out-Null
+            $script:activePackage=$package.PackageFullName
+            Write-PackageThemeStatus 'entry-hook' 'Protected ChatGPT entry hook supplies CDP without package-wide debugging'
+        }
+        return
+    }
     if($script:activePackage -eq $package.PackageFullName -and $script:packageSession){
         $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
         $expected='"'+$script:packageHookDebugger+'" --config "'+(Join-Path $script:packageHookRuntime ('package-hooks\'+$package.PackageFullName+'.json'))+'"'

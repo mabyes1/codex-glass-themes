@@ -123,7 +123,7 @@ function Start-IndependentWatcher($package){
             if(Test-Path -LiteralPath $statusPath){
                 $status=Read-Json $statusPath
                 $candidate=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$status.workerPid) -ErrorAction SilentlyContinue
-                if($candidate -and $candidate.CreationDate.ToUniversalTime() -ge $started -and $candidate.CommandLine.IndexOf(('"'+$startScript+'"'),[StringComparison]::OrdinalIgnoreCase) -ge 0 -and $status.state -eq 'armed' -and $status.package -eq $package.PackageFullName -and (Invoke-CimMethod -InputObject $candidate -MethodName GetOwnerSid).Sid -eq $sid){$ready=$true}
+                if($candidate -and $candidate.CreationDate.ToUniversalTime() -ge $started -and $candidate.CommandLine.IndexOf(('"'+$startScript+'"'),[StringComparison]::OrdinalIgnoreCase) -ge 0 -and $status.state -in @('armed','entry-hook') -and $status.package -eq $package.PackageFullName -and (Invoke-CimMethod -InputObject $candidate -MethodName GetOwnerSid).Sid -eq $sid){$ready=$true}
             }
             if(!$ready){Start-Sleep -Milliseconds 250}
         }while(!$ready -and [DateTime]::UtcNow -lt $deadline)
