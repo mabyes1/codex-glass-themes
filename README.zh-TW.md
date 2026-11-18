@@ -2,7 +2,7 @@
 
 **一點玻璃、一點色彩，讓工作空間更像你。**
 
-[English](README.md) · [繁體中文](README.zh-TW.md) · [下載 v2.0.1 EXE](https://github.com/mabyes1/codex-glass-themes/releases/download/v2.0.1/ChatGPT-Glass-Themes-Setup-2.0.1-win-x64.exe) · [從原始碼建置](packaging/README.md#繁體中文)
+[English](README.md) · [繁體中文](README.zh-TW.md) · [下載 v2.0.3 EXE](https://github.com/mabyes1/codex-glass-themes/releases/download/v2.0.3/ChatGPT-Glass-Themes-Setup-2.0.3-win-x64.exe) · [從原始碼建置](packaging/README.md#繁體中文)
 
 替 Windows Codex 換上喜歡的氣氛：清透玻璃、自己的照片、安靜的深海，或緩緩流動的銀河。背景可以有個性，文字依然清楚；設定會自動保存，平常照樣使用原本的 Codex 圖示開啟。
 
@@ -59,12 +59,12 @@
 
 | 版本 | Windows 支援範圍 |
 | --- | --- |
-| **v2.0.1／最新原始碼** | Windows 10 22H2 / Windows 11，組建 19045 以上。低於 22621 使用不透明視窗內的模擬玻璃。 |
+| **v2.0.3／最新原始碼** | Windows 10 22H2 / Windows 11，組建 19045 以上。低於 22621 使用不透明視窗內的模擬玻璃。 |
 | **較舊的 v1.2.0 安裝檔** | Windows 11 x64，組建 22621 以上。這份舊安裝檔尚未包含 Windows 10 相容模式。 |
 
 Windows 11 22621 以上使用原生背景效果。較舊的支援版本會柔化視窗內的佈景，不會透出或模糊桌面。此安裝包不支援 ARM64。
 
-1. [下載 v2.0.1 安裝檔](https://github.com/mabyes1/codex-glass-themes/releases/download/v2.0.1/ChatGPT-Glass-Themes-Setup-2.0.1-win-x64.exe)，或[從原始碼建置](packaging/README.md#繁體中文)。
+1. [下載 v2.0.3 安裝檔](https://github.com/mabyes1/codex-glass-themes/releases/download/v2.0.3/ChatGPT-Glass-Themes-Setup-2.0.3-win-x64.exe)，或[從原始碼建置](packaging/README.md#繁體中文)。
 2. 使用自己的普通 Windows 帳戶執行，按 **「安裝並啟用」**。預設位置是 `%USERPROFILE%\CodexGlass`。
 3. 若安裝時 Codex 已經在執行，先完成手上的工作，再**完整退出一次**，然後從原本的開始功能表或工作列圖示開啟。
 4. 點視窗上方的 **「佈景」**，選擇喜歡的模式。
