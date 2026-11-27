@@ -103,6 +103,11 @@ export function createCosmosLayer(container, galaxyURL = '') {
   const visibility=()=>{if(document.hidden)stop();else sync();};
   document.addEventListener('visibilitychange',visibility);reduced.addEventListener('change',visibility);
   return {
+    setImage(url){
+      if(disposed||!url||galaxyURL===url)return;
+      galaxyURL=url;releaseImage();
+      if(active)loadImage();
+    },
     setActive(value,animate=true){
       if(disposed)return;
       const changed=active!==value||motion!==animate;

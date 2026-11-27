@@ -255,7 +255,7 @@ export function createAquariumLayer(container, backdropURL = '', fishURL = '', r
     }
   }
   function loadFish() {
-    if(!fishURL){fishError='Fish atlas unavailable';return;}
+    if(!fishURL)return;
     const sources=[[fishURL,crops],...(reefURL?[[reefURL,reefCrops]]:[]),...(exoticURL?[[exoticURL,exoticCrops]]:[])];
     for(const [url,regions] of sources){
       const atlas=new Image();atlasImages.add(atlas);
@@ -270,15 +270,19 @@ export function createAquariumLayer(container, backdropURL = '', fishURL = '', r
       atlas.src=url;
     }
   }
+  function ensureBackdrop() {
+    if (plate || !backdropURL) return;
+    plate=document.createElement('div');plate.dataset.glassOcean='';
+    plate.setAttribute('aria-hidden','true');
+    plate.style.cssText='position:absolute;inset:-12px;pointer-events:none;filter:blur(3px);background-size:cover;background-position:center;';
+    updateBackdrop();
+    if (canvas) canvas.before(plate);
+    else container.append(plate);
+    plate.hidden = !active;
+  }
   function ensure() {
     if (canvas) return;
-    if (backdropURL) {
-      plate=document.createElement('div');plate.dataset.glassOcean='';
-      plate.setAttribute('aria-hidden','true');
-      plate.style.cssText='position:absolute;inset:-12px;pointer-events:none;filter:blur(3px);background-size:cover;background-position:center;';
-      updateBackdrop();
-      container.append(plate);
-    }
+    ensureBackdrop();
     canvas = document.createElement('canvas');
     canvas.dataset.glassAquarium = ''; canvas.setAttribute('aria-hidden','true');
     canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;';
@@ -459,12 +463,19 @@ export function createAquariumLayer(container, backdropURL = '', fishURL = '', r
   reduced.addEventListener('change',visibility);
   return {
     feed,previewFood,
+    setAtlases(base,reef,exotic) {
+      if(disposed||fishURL||!base)return;
+      fishURL=base;reefURL=reef;exoticURL=exotic;
+      if(canvas)loadFish();
+    },
     setFishCount(value) { if(!disposed&&population(value)&&active)sync(true); },
     setBackdrop(url,id='original') {
       if(disposed||!url)return;
       backdropId=id;
       if(backdropURL===url)return;
-      backdropURL=url;updateBackdrop();
+      backdropURL=url;
+      if(canvas)ensureBackdrop();
+      updateBackdrop();
     },
     setActive(value, animate = true) {
       if (disposed) return;

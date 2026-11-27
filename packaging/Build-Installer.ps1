@@ -1,4 +1,4 @@
-﻿param([string]$Version='2.0.3')
+﻿param([string]$Version='2.1.0')
 $ErrorActionPreference='Stop'
 if($Version -notmatch '^\d+\.\d+\.\d+$'){throw 'Invalid release version'}
 $repository=Split-Path -Parent $PSScriptRoot
@@ -26,8 +26,12 @@ $compiler=Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 if($LASTEXITCODE -ne 0){throw 'Startup helper compilation failed'}
 & $compiler /nologo /target:library /platform:x64 ('/out:'+(Join-Path $stage 'bin\PackageDebugSession.dll')) (Join-Path $stage 'PackageDebugSession.cs')
 if($LASTEXITCODE -ne 0){throw 'Package session compilation failed'}
+& $compiler /nologo /target:winexe /platform:x64 ('/out:'+(Join-Path $stage 'bin\StartThemeWatcher.exe')) (Join-Path $stage 'StartThemeWatcher.cs')
+if($LASTEXITCODE -ne 0){throw 'Background watcher launcher compilation failed'}
 & $compiler /nologo /target:exe /platform:x64 /reference:System.Windows.Forms.dll ('/out:'+(Join-Path $stage 'theme\NativeBackdropWatch.exe')) (Join-Path $stage 'theme\NativeBackdropWatch.cs')
 if($LASTEXITCODE -ne 0){throw 'Native backdrop helper compilation failed'}
+& $compiler /nologo /target:library /platform:x64 ('/out:'+(Join-Path $stage 'theme\ThemeWindow.dll')) (Join-Path $stage 'theme\ThemeWindow.cs')
+if($LASTEXITCODE -ne 0){throw 'Native window library compilation failed'}
 $files=@(Get-ChildItem -LiteralPath $stage -File -Recurse|Sort-Object FullName|ForEach-Object {
     [ordered]@{path=$_.FullName.Substring($stage.Length+1).Replace('\','/');bytes=$_.Length}
 })

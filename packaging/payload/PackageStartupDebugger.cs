@@ -35,7 +35,7 @@ internal static class PackageStartupDebugger {
         if(error!=0)throw new Win32Exception(error);return name.ToString();
     }
     static int Main(string[] args) {
-        IntPtr process=IntPtr.Zero,thread=IntPtr.Zero;
+        IntPtr process=IntPtr.Zero,thread=IntPtr.Zero,patchProcess=IntPtr.Zero;
         string log=null;bool canResume=false;
         var serializer=new JavaScriptSerializer();
         var result=new Dictionary<string,object>{{"pid",0},{"tid",0},{"patched",false},{"resumed",false},{"error",null}};
@@ -43,8 +43,7 @@ internal static class PackageStartupDebugger {
         var callbackClock=Stopwatch.StartNew();
         try {
             uint pid=Argument(args,"-p"),tid=Argument(args,"-tid");result["pid"]=pid;result["tid"]=tid;
-            process=OpenProcess(0x1038,false,pid);
-            if(process==IntPtr.Zero)process=OpenProcess(0x1000,false,pid);
+            process=OpenProcess(0x1000,false,pid);
             if(process==IntPtr.Zero)throw new Win32Exception(Marshal.GetLastWin32Error());
             long creation,exit,kernel,user;
             if(!GetProcessTimes(process,out creation,out exit,out kernel,out user))throw new Win32Exception(Marshal.GetLastWin32Error());
@@ -63,8 +62,11 @@ internal static class PackageStartupDebugger {
             var packagePath=new StringBuilder((int)packagePathLength);
             packagePathError=GetPackagePathByFullName(package,ref packagePathLength,packagePath);
             if(packagePathError!=0)throw new Win32Exception(packagePathError);
-            string officialRoot=Path.Combine(packagePath.ToString(),"app");
-            if(!String.Equals(actualImage.ToString(),Path.Combine(officialRoot,"ChatGPT.exe"),StringComparison.OrdinalIgnoreCase)&&!String.Equals(actualImage.ToString(),Path.Combine(officialRoot,"resources","codex-command-runner.exe"),StringComparison.OrdinalIgnoreCase))throw new Exception("Process image is not an official activation entry");
+            string image=actualImage.ToString();
+            string packageRoot=packagePath.ToString().TrimEnd(Path.DirectorySeparatorChar)+Path.DirectorySeparatorChar;
+            if(!image.StartsWith(packageRoot,StringComparison.OrdinalIgnoreCase))throw new Exception("Process image is not in the official package");
+            string mainImage=Path.Combine(packageRoot,"app","ChatGPT.exe");
+            result["image"]=image.Substring(packageRoot.Length);
             string sid=WindowsIdentity.GetCurrent().User.Value;
             IntPtr token;
             if(!OpenProcessToken(process,8,out token))throw new Win32Exception(Marshal.GetLastWin32Error());
@@ -82,25 +84,31 @@ internal static class PackageStartupDebugger {
             var config=serializer.Deserialize<Dictionary<string,object>>(File.ReadAllText(args[configIndex+1]));
             log=(string)config["log"];
             if(package!=(string)config["package"]||sid!=(string)config["sid"])throw new Exception("Activation configuration does not match this package/user");
-            foreach(object value in (IEnumerable)config["excludedPids"])if(Convert.ToUInt32(value)==pid)throw new Exception("Existing process was excluded");
-            if(creation<now-TimeSpan.FromSeconds(30).Ticks)throw new Exception("Late callback will resume natively without argument modification");
-            long expires=Convert.ToInt64(config["expires"]);
-            if(creation<Convert.ToInt64(config["notBefore"])||(expires>0&&now>expires))throw new Exception("Argument modification window has expired; native activation will resume");
-            string command=StartupArguments.ReadCommandLine(process,(string)config["image"]);
-            result["argumentPresentBefore"]=command.IndexOf("--remote-debugging-port",StringComparison.OrdinalIgnoreCase)>=0;
-            if(Regex.IsMatch(command,@"(^|\s)--type="))throw new Exception("Child process will resume without argument modification");
-            string mode=config.ContainsKey("mode")?(string)config["mode"]:"isolated";
-            if(mode=="isolated"){
-                string profile=(string)config["requiredProfile"];
-                if(String.IsNullOrEmpty(profile)||command.IndexOf(profile,StringComparison.OrdinalIgnoreCase)<0)throw new Exception("Activation has no isolated test profile; native activation will resume");
-            }else if(mode!="user-main")throw new Exception("Unknown activation mode; native activation will resume");
-            if(command.IndexOf("--remote-debugging-port",StringComparison.OrdinalIgnoreCase)<0){
-                // A bare filename changes Electron's early profile name to
-                // ChatGPT. Keep an absolute alias to the same official image.
-                string imageArgument=(string)config["imageArgument"];
-                if(String.IsNullOrEmpty(imageArgument))throw new Exception("Absolute image argument is missing; native activation will resume");
-                StartupArguments.Append(process,(string)config["image"],"--remote-debugging-port=0",imageArgument);
-                result["patched"]=true;
+            // The package also exposes Chrome Native Messaging and other entries.
+            // Resume those without reading or changing their command line.
+            if(String.Equals(image,mainImage,StringComparison.OrdinalIgnoreCase)){
+                foreach(object value in (IEnumerable)config["excludedPids"])if(Convert.ToUInt32(value)==pid)throw new Exception("Existing process was excluded");
+                if(creation<now-TimeSpan.FromSeconds(30).Ticks)throw new Exception("Late callback will resume natively without argument modification");
+                long expires=Convert.ToInt64(config["expires"]);
+                if(creation<Convert.ToInt64(config["notBefore"])||(expires>0&&now>expires))throw new Exception("Argument modification window has expired; native activation will resume");
+                patchProcess=OpenProcess(0x1038,false,pid);
+                if(patchProcess==IntPtr.Zero)throw new Win32Exception(Marshal.GetLastWin32Error());
+                string command=StartupArguments.ReadCommandLine(patchProcess,mainImage);
+                result["argumentPresentBefore"]=command.IndexOf("--remote-debugging-port",StringComparison.OrdinalIgnoreCase)>=0;
+                if(Regex.IsMatch(command,@"(^|\s)--type="))throw new Exception("Child process will resume without argument modification");
+                string mode=config.ContainsKey("mode")?(string)config["mode"]:"isolated";
+                if(mode=="isolated"){
+                    string profile=(string)config["requiredProfile"];
+                    if(String.IsNullOrEmpty(profile)||command.IndexOf(profile,StringComparison.OrdinalIgnoreCase)<0)throw new Exception("Activation has no isolated test profile; native activation will resume");
+                }else if(mode!="user-main")throw new Exception("Unknown activation mode; native activation will resume");
+                if(command.IndexOf("--remote-debugging-port",StringComparison.OrdinalIgnoreCase)<0){
+                    // A bare filename changes Electron's early profile name to
+                    // ChatGPT. Keep an absolute alias to the same official image.
+                    string imageArgument=(string)config["imageArgument"];
+                    if(String.IsNullOrEmpty(imageArgument))throw new Exception("Absolute image argument is missing; native activation will resume");
+                    StartupArguments.Append(patchProcess,mainImage,"--remote-debugging-port=0",imageArgument);
+                    result["patched"]=true;
+                }
             }
         }catch(Exception error){result["error"]=error.Message;}
         finally {
@@ -110,6 +118,7 @@ internal static class PackageStartupDebugger {
                 if(!(bool)result["resumed"])result["error"]="Initial thread resume failed or remained suspended";
             }
             if(thread!=IntPtr.Zero)StartupArguments.CloseHandle(thread);
+            if(patchProcess!=IntPtr.Zero)StartupArguments.CloseHandle(patchProcess);
             if(process!=IntPtr.Zero)StartupArguments.CloseHandle(process);
             result["elapsedMs"]=callbackClock.Elapsed.TotalMilliseconds;
             if(log!=null){try{if(File.Exists(log)&&new FileInfo(log).Length>1048576)File.WriteAllText(log,"");File.AppendAllText(log,serializer.Serialize(result)+Environment.NewLine);}catch{}}

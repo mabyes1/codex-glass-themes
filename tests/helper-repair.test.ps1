@@ -23,7 +23,7 @@ try{
     foreach($child in $children[0..2]){$child.Refresh();if(!$child.HasExited){throw 'A duplicate helper survived'}}
     $other.Refresh();if($other.HasExited){throw 'Unrelated Node process was stopped'}
     if([IO.File]::ReadAllText((Join-Path $result.backup 'theme\theme-host.mjs')) -ne 'setInterval(()=>{},1000);'){throw 'Old helper was not backed up'}
-    foreach($relative in @('Start-Theme-Auto.ps1','Get-ThemeHelperProcess.ps1','Setup-Theme.ps1','theme\theme-host.mjs','theme\host-lease.mjs','theme\token-feed.mjs')){
+    foreach($relative in @('Start-Theme-Auto.ps1','Get-ThemeHelperProcess.ps1','Setup-Theme.ps1','theme\theme-host.mjs','theme\theme-panel.js','theme\host-lease.mjs','theme\token-feed.mjs','theme\account-panel.js','theme\account-switcher.mjs','theme\account-windows.ps1','theme\startup-gate.mjs','theme\native-window.ps1','theme\ThemeWindow.cs')){
         if([IO.File]::ReadAllText((Join-Path $root $relative)) -ne [IO.File]::ReadAllText((Join-Path $repository ('packaging\payload\'+$relative)))){throw ('Repair copy differs: '+$relative)}
     }
     $owner=Get-Content -LiteralPath (Join-Path $root 'installation.json') -Raw|ConvertFrom-Json

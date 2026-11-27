@@ -14,6 +14,7 @@ $shell=Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
 $startScript=Join-Path $InstallRoot 'Start-Theme-Auto.ps1'
 $arguments='-NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File "'+$startScript+'"'
 $command='"'+$shell+'" '+$arguments
+$launcher=Join-Path $InstallRoot 'bin\StartThemeWatcher.exe'
 $mutex=[Threading.Mutex]::new($false,'Local\CodexGlassSetup-'+$sid)
 if(!$mutex.WaitOne(0)){$mutex.Dispose();throw '另一個主題安裝程序正在執行。'}
 $activated=$false;$runChanged=$false;$installed=$false;$previousRun=$null;$touchedRoot=$false;$loginTaskChanged=$false;$previousLoginTaskXml=$null
@@ -106,13 +107,19 @@ function Clear-OwnedHook {
         }
     }
 }
+function Test-OwnedLoginTask($task){
+    if(@($task.Actions).Count -ne 1){return $false}
+    $action=$task.Actions[0]
+    return ($action.Execute -eq $launcher -and [string]::IsNullOrEmpty($action.Arguments)) -or
+        ($action.Execute -eq $shell -and $action.Arguments -eq $arguments)
+}
 function Start-IndependentWatcher($package){
     $taskName=$loginTaskName;$ready=$false;$registered=$false;$started=[DateTime]::UtcNow
     $existingTask=Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-    if($existingTask -and (@($existingTask.Actions).Count -ne 1 -or $existingTask.Actions[0].Execute -ne $shell -or $existingTask.Actions[0].Arguments -ne $arguments)){throw 'Login task belongs to another installation; it was preserved'}
+    if($existingTask -and !(Test-OwnedLoginTask $existingTask)){throw 'Login task belongs to another installation; it was preserved'}
     if($existingTask){$script:previousLoginTaskXml=Export-ScheduledTask -TaskName $taskName}
     try{
-        $action=New-ScheduledTaskAction -Execute $shell -Argument $arguments -WorkingDirectory $InstallRoot
+        $action=New-ScheduledTaskAction -Execute $launcher -WorkingDirectory $InstallRoot
         $principal=New-ScheduledTaskPrincipal -UserId $sid -LogonType Interactive -RunLevel Limited
         $trigger=@(New-CodexWatcherTriggers -UserSid $sid)
         $settings=New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
@@ -167,7 +174,7 @@ try{
         Stop-OwnedHelpers;Clear-OwnedHook
         $loginTask=Get-ScheduledTask -TaskName $loginTaskName -ErrorAction SilentlyContinue
         if($loginTask){
-            if(@($loginTask.Actions).Count -ne 1 -or $loginTask.Actions[0].Execute -ne $shell -or $loginTask.Actions[0].Arguments -ne $arguments){throw 'Login task belongs to another installation; it was preserved'}
+            if(!(Test-OwnedLoginTask $loginTask)){throw 'Login task belongs to another installation; it was preserved'}
             Unregister-ScheduledTask -TaskName $loginTaskName -Confirm:$false
         }
         if(Test-Path -LiteralPath $backup){$original=Read-Json $backup;if($original.existed){New-ItemProperty -LiteralPath $runKey -Name $runName -Value $original.value -PropertyType String -Force|Out-Null}else{Remove-ItemProperty -LiteralPath $runKey -Name $runName -ErrorAction SilentlyContinue}}
@@ -199,9 +206,11 @@ try{
     $previousRun=Get-ItemProperty -LiteralPath $runKey -Name $runName -ErrorAction SilentlyContinue
     if(!(Test-Path -LiteralPath $backupPath)){if($previousRun){throw '登入備份遺失，已保留現有設定。'};Write-Json $backupPath @{existed=$false;value=$null;command=$command}}
     Write-Output '正在啟用登入自動啟動…'
-    New-ItemProperty -LiteralPath $runKey -Name $runName -Value $command -PropertyType String -Force|Out-Null;$runChanged=$true
     $activated=$true;$status=Start-IndependentWatcher $package
-    Remove-ItemProperty -LiteralPath $runKey -Name $runName -ErrorAction SilentlyContinue
+    if($previousRun){
+        Remove-ItemProperty -LiteralPath $runKey -Name $runName
+        $runChanged=$true
+    }
     New-Item -Path $uninstallKey -Force|Out-Null
     $uninstallCommand='"'+$shell+'" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "'+(Join-Path $InstallRoot 'Setup-Theme.ps1')+'" -Action Uninstall -InstallRoot "'+$InstallRoot+'"'
     @{DisplayName='ChatGPT Glass Themes（Codex）';DisplayVersion=$manifest.version;Publisher='Codex Glass Themes';InstallLocation=$InstallRoot;UninstallString=$uninstallCommand}|ForEach-Object {foreach($key in $_.Keys){New-ItemProperty -LiteralPath $uninstallKey -Name $key -Value $_[$key] -PropertyType String -Force|Out-Null}}

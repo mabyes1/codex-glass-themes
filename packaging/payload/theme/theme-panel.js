@@ -62,6 +62,28 @@ function installUsageShortcuts() {
       .filter(q => q.queryKey[1] !== 'image-generation' && q.state.data?.rate_limit);
     return queries.find(q => q.getObserversCount() > 0) || queries.find(q => q.queryKey.length === 1);
   }
+  async function readLimits(force = false) {
+    connect();
+    let query = client && usageQuery();
+    if (force && query) {
+      await client.refetchQueries({queryKey:query.queryKey,exact:true},{throwOnError:true});
+      query = usageQuery();
+    }
+    const data = query?.state.data;
+    if (!data) return null;
+    const windowInfo = value => value ? {
+      usedPercent: value.used_percent,
+      windowDurationMins: value.limit_window_seconds ? value.limit_window_seconds / 60 : null
+    } : null;
+    return {
+      rateLimits: {
+        primary: windowInfo(data.rate_limit?.primary_window),
+        secondary: windowInfo(data.rate_limit?.secondary_window)
+      },
+      rateLimitResetCredits: {availableCount: data.rate_limit_reset_credits?.available_count},
+      updatedAt: query.state.dataUpdatedAt
+    };
+  }
   function render() {
     if (disposed || !client) return;
     const query = usageQuery();
@@ -101,7 +123,7 @@ function installUsageShortcuts() {
   const timer = setInterval(refresh,60000);
   const retry = setInterval(connect,3000);
   window.addEventListener('focus',refresh);
-  window.__kenUsageShortcuts = {getDiagnostics:()=>({connected:!!client,updatedAt,buttons:[...shadow.querySelectorAll('button')].map(e=>({text:e.textContent,title:e.title}))}),dispose(){disposed=true;clearInterval(timer);clearInterval(retry);unsubscribe?.();window.removeEventListener('focus',refresh);host.remove();delete window.__kenUsageShortcuts;}};
+  window.__kenUsageShortcuts = {readLimits,getDiagnostics:()=>({connected:!!client,updatedAt,buttons:[...shadow.querySelectorAll('button')].map(e=>({text:e.textContent,title:e.title}))}),dispose(){disposed=true;clearInterval(timer);clearInterval(retry);unsubscribe?.();window.removeEventListener('focus',refresh);host.remove();delete window.__kenUsageShortcuts;}};
   connect();
 }
 
@@ -151,6 +173,24 @@ function installUsageShortcuts() {
   let tokenUsage=null;
   const aquarium = createAquarium(background, oceanScene().url, fishAtlas, reefAtlas, exoticAtlas);
   const cosmos = createCosmos(background, galaxyImage);
+  const fishFiles = ['fish-atlas.png', 'fish-atlas-reef.png', 'fish-atlas-exotic.png'];
+  const galaxyFile = 'milky-way.png';
+  const assetURLs = new Map(), pendingAssets = new Set();
+  function requestAsset(file) {
+    if (!file || assetURLs.has(file) || pendingAssets.has(file) || !window.__kenGlassLoadAsset) return;
+    pendingAssets.add(file);
+    window.__kenGlassLoadAsset(file);
+  }
+  function receiveAsset(file, url) {
+    if (disposed || !pendingAssets.delete(file) || !url) return;
+    assetURLs.set(file, url);
+    const scene = oceanScene();
+    if (file === scene.file) aquarium.setBackdrop(url, scene.id);
+    if (file === galaxyFile) cosmos.setImage(url);
+    if (fishFiles.includes(file) && fishFiles.every(name => assetURLs.has(name))) {
+      aquarium.setAtlases(...fishFiles.map(name => assetURLs.get(name)));
+    }
+  }
   const animatedMode = () => prefs.mode === 'aquarium' || prefs.mode === 'cosmos';
   const host = document.createElement('div'); host.id = 'ken-glass-switcher';
   host.style.cssText = 'position:fixed;top:8px;right:160px;z-index:2147483000;-webkit-app-region:no-drag;';
@@ -298,10 +338,17 @@ function installUsageShortcuts() {
     const preset = mode === 'color' ? selectedPreset() : null;
     shadow.querySelectorAll('[data-preset]').forEach(b => b.setAttribute('aria-pressed',String(b.dataset.preset === preset?.id)));
     shadow.querySelectorAll('[data-reading]').forEach(b => b.setAttribute('aria-pressed',String(Number(b.dataset.reading) === prefs.surfaceStrength)));
-    aquarium.setBackdrop(oceanScene().url,oceanScene().id);
+    const scene = oceanScene();
+    const visibleBackground = !prefs.keepForeground || backgroundStrength() > 0;
+    if (mode === 'aquarium' && visibleBackground) {
+      aquarium.setBackdrop(scene.url || assetURLs.get(scene.file), scene.id);
+      requestAsset(scene.file);
+      fishFiles.forEach(requestAsset);
+    }
+    if (mode === 'cosmos' && visibleBackground) requestAsset(galaxyFile);
     aquarium.setFishCount(prefs.aquariumFishCount);
-    aquarium.setActive(mode === 'aquarium' && (!prefs.keepForeground || backgroundStrength() > 0),prefs.aquariumMotion);
-    cosmos.setActive(mode === 'cosmos' && (!prefs.keepForeground || backgroundStrength() > 0),prefs.cosmosMotion);
+    aquarium.setActive(mode === 'aquarium' && visibleBackground,prefs.aquariumMotion);
+    cosmos.setActive(mode === 'cosmos' && visibleBackground,prefs.cosmosMotion);
     $('active-name').textContent = mode === 'cosmos' ? `銀河星海 · 玻璃後的宇宙` : mode === 'aquarium' ? `${oceanScene().name} · ${prefs.aquariumFishCount} 隻魚陪你工作` : mode === 'color' ? `${preset?.name || '我的配色'} · ${expectedTheme === 'light' ? '明亮' : '深色'}玻璃` : mode === 'image' ? '圖片玻璃 · 讓喜歡的風景陪你工作' : mode === 'original' ? 'Codex 原始外觀' : '清透玻璃 · 留一點空間給桌面風景';
     $('toggle-dot').style.background = mode === 'color' || animatedMode() ? appearanceFor(prefs).background : mode === 'image' && imageURL ? `url(${JSON.stringify(imageURL)}) center/cover` : 'linear-gradient(135deg,#b5bdc9,#687686)';
     $('toggle').title = $('active-name').textContent;
@@ -459,6 +506,7 @@ function installUsageShortcuts() {
         ['astra','sol','terra','luna'].map(k=>`${k} ${(counts[k]||0).toLocaleString()}`).join(' / ')+
         (counts.unknown?` / 未知模型 ${counts.unknown.toLocaleString()}`:'')+(usage.errors?' · 部分紀錄暫時讀不到':'');
     },
+    receiveAsset,
     importFile,
     open:() => open(true),
     dispose(restore = true) {

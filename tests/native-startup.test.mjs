@@ -7,7 +7,7 @@ import vm from 'node:vm';
 // No Codex process, PowerShell, DWM, or wall-clock sleeps are used here.
 const source=await readFile(new URL('../packaging/payload/theme/theme-host.mjs',import.meta.url),'utf8');
 const handlers=source.slice(source.indexOf('function onNative('),source.indexOf('function backdropRepaired('))+
-  source.slice(source.indexOf('async function checkBackdrop('),source.indexOf('async function connect('));
+  source.slice(source.indexOf('async function checkBackdrop('),source.indexOf('const accountWorld='));
 function fixture({permanent=false}={}){
   const timers=new Map(),calls=[],renderer=[],watched=[];let nextId=0,ready=false;
   const scope=vm.createContext({console:{error(){}},

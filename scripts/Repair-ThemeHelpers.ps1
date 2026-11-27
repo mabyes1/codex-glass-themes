@@ -15,7 +15,7 @@ function Assert-Ordinary([string]$path){
 Assert-Ordinary $InstallRoot
 $source=Join-Path $PSScriptRoot 'payload'
 if(!(Test-Path -LiteralPath $source)){$source=Join-Path $PSScriptRoot '..\packaging\payload'}
-$files=@('Start-Theme-Auto.ps1','Get-ThemeHelperProcess.ps1','Setup-Theme.ps1','theme\theme-host.mjs','theme\host-lease.mjs','theme\token-feed.mjs')
+$files=@('Start-Theme-Auto.ps1','Get-ThemeHelperProcess.ps1','Setup-Theme.ps1','theme\theme-host.mjs','theme\theme-panel.js','theme\host-lease.mjs','theme\token-feed.mjs','theme\account-panel.js','theme\account-switcher.mjs','theme\account-windows.ps1','theme\startup-gate.mjs','theme\native-window.ps1','theme\ThemeWindow.cs')
 foreach($relative in $files){
     if(!(Test-Path -LiteralPath (Join-Path $source $relative) -PathType Leaf)){throw ('Repair file missing: '+$relative)}
     Assert-Ordinary (Join-Path $InstallRoot $relative)
@@ -25,7 +25,13 @@ $hostScript=Join-Path $InstallRoot 'theme\theme-host.mjs'
 $nativeExe=Join-Path $InstallRoot 'theme\NativeBackdropWatch.exe'
 $taskName='CodexGlassThemeAutoAttach-'+$sid
 $task=Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-if($task -and (@($task.Actions).Count -ne 1 -or $task.Actions[0].Arguments.IndexOf(('"'+$startScript+'"'),[StringComparison]::OrdinalIgnoreCase) -lt 0)){throw 'Scheduled task belongs to another directory.'}
+if($task){
+    $action=$task.Actions[0]
+    $launcher=Join-Path $InstallRoot 'bin\StartThemeWatcher.exe'
+    $silentTask=$action.Execute -eq $launcher -and [string]::IsNullOrEmpty($action.Arguments)
+    $legacyTask=$action.Arguments -and $action.Arguments.IndexOf(('"'+$startScript+'"'),[StringComparison]::OrdinalIgnoreCase) -ge 0
+    if(@($task.Actions).Count -ne 1 -or !($silentTask -or $legacyTask)){throw 'Scheduled task belongs to another directory.'}
+}
 function Get-OwnedHelpers {
     foreach($candidate in @(Get-CimInstance Win32_Process -Filter "Name='node.exe' OR Name='powershell.exe' OR Name='pwsh.exe' OR Name='NativeBackdropWatch.exe'")){
         $matchesPath=($candidate.Name -eq 'NativeBackdropWatch.exe' -and $candidate.ExecutablePath -eq $nativeExe) -or
@@ -65,7 +71,7 @@ try{try{$held=$guard.WaitOne(0)}catch [Threading.AbandonedMutexException]{$held=
             $manifest=Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8|ConvertFrom-Json
             foreach($relative in $files){$portable=$relative.Replace('\','/');$manifest.files=@($manifest.files|Where-Object path -ne $portable)+@([pscustomobject]@{path=$portable;bytes=(Get-Item -LiteralPath (Join-Path $InstallRoot $relative)).Length})}
             $manifest.files=@($manifest.files|ForEach-Object {[ordered]@{path=$_.path;bytes=$_.bytes}})
-            $manifest.version='2.0.1';[IO.File]::WriteAllText($manifestPath,($manifest|ConvertTo-Json -Depth 5),[Text.UTF8Encoding]::new($false))
+            [IO.File]::WriteAllText($manifestPath,($manifest|ConvertTo-Json -Depth 5),[Text.UTF8Encoding]::new($false))
         }
         $owner|Add-Member -NotePropertyName helperRepairVersion -NotePropertyValue '2.0.1' -Force
         [IO.File]::WriteAllText($markerPath,($owner|ConvertTo-Json),[Text.UTF8Encoding]::new($false))
